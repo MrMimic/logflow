@@ -1,0 +1,29 @@
+name: Python tests
+
+on: [push]
+
+jobs:
+  build:
+
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        python-version: [3.6]
+
+    steps:
+    - uses: actions/checkout@v2
+    - name: Unit tests
+      uses: actions/setup-python@v2
+      with:
+        python-version: ${{ matrix.python-version }}
+    - name: Install dependencies
+      run: |
+          apt-get update -qq && apt-get install -y -qq cython
+          pip3 install cython loguru coverage tqdm h5py 
+          pip3 install word2vec torch torchvision
+    - name: Unit test
+      run: |
+          coverage run --source=./logflow/ --omit='../tests/' -m unittest discover
+    - name: Coverage
+      run: |
+          coverage report -m
