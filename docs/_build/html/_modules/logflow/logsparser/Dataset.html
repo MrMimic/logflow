@@ -1,0 +1,229 @@
+
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN"
+  "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+
+<html xmlns="http://www.w3.org/1999/xhtml">
+  <head>
+    <meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
+    <title>logflow.logsparser.Dataset &#8212; LogFlow 0.1 documentation</title>
+    <link rel="stylesheet" href="../../../_static/alabaster.css" type="text/css" />
+    <link rel="stylesheet" href="../../../_static/pygments.css" type="text/css" />
+    <script type="text/javascript">
+      var DOCUMENTATION_OPTIONS = {
+        URL_ROOT:    '../../../',
+        VERSION:     '0.1',
+        COLLAPSE_INDEX: false,
+        FILE_SUFFIX: '.html',
+        HAS_SOURCE:  true,
+        SOURCELINK_SUFFIX: '.txt'
+      };
+    </script>
+    <script type="text/javascript" src="../../../_static/jquery.js"></script>
+    <script type="text/javascript" src="../../../_static/underscore.js"></script>
+    <script type="text/javascript" src="../../../_static/doctools.js"></script>
+    <link rel="index" title="Index" href="../../../genindex.html" />
+    <link rel="search" title="Search" href="../../../search.html" />
+   
+  <link rel="stylesheet" href="../../../_static/custom.css" type="text/css" />
+  
+  <meta name="viewport" content="width=device-width, initial-scale=0.9, maximum-scale=0.9" />
+
+  </head>
+  <body>
+  
+
+    <div class="document">
+      <div class="documentwrapper">
+        <div class="bodywrapper">
+          <div class="body" role="main">
+            
+  <h1>Source code for logflow.logsparser.Dataset</h1><div class="highlight"><pre>
+<span></span><span class="kn">from</span> <span class="nn">loguru</span> <span class="k">import</span> <span class="n">logger</span>
+<span class="kn">from</span> <span class="nn">multiprocessing</span> <span class="k">import</span> <span class="n">Pool</span>
+<span class="kn">from</span> <span class="nn">logflow.logsparser.Journal</span> <span class="k">import</span> <span class="n">Journal</span>
+<span class="kn">from</span> <span class="nn">tqdm</span> <span class="k">import</span> <span class="n">tqdm</span> <span class="c1"># type: ignore</span>
+<span class="kn">from</span> <span class="nn">collections</span> <span class="k">import</span> <span class="n">Counter</span>
+<span class="kn">import</span> <span class="nn">random</span>
+<span class="kn">import</span> <span class="nn">string</span>
+<span class="kn">import</span> <span class="nn">h5py</span> <span class="c1"># type: ignore</span>
+<span class="kn">import</span> <span class="nn">word2vec</span> <span class="c1"># type: ignore</span>
+<span class="kn">import</span> <span class="nn">pickle</span>
+<span class="kn">from</span> <span class="nn">typing</span> <span class="k">import</span> <span class="n">List</span><span class="p">,</span> <span class="n">Dict</span>
+
+<div class="viewcode-block" id="Dataset"><a class="viewcode-back" href="../../../docs/logsparser/doc.html#logflow.logsparser.Dataset.Dataset">[docs]</a><span class="k">class</span> <span class="nc">Dataset</span><span class="p">:</span>
+    <span class="sd">&quot;&quot;&quot;A dataset is an object containing the data. It uses the Journal class for the reading, the parsing of the logs. It is used for the saving of logs, patterns and parsed files</span>
+<span class="sd">    </span>
+<span class="sd">     Args:</span>
+<span class="sd">            list_files (list): List of the logs file to read. Each element of the list is a path to a file.</span>
+<span class="sd">            dict_patterns (dict, optional): Patterns previously detected by the first step. If default, the dict is created and the dataset computes the patterns. If provided, the dataset uses the patterns to associate each line of the file to a pattern.. Defaults to {}.</span>
+<span class="sd">            path_data (str, optional): Path to the data. Defaults to &quot;&quot;.</span>
+<span class="sd">            saving (bool, optional): Saving the patterns to generate the embeddings. Defaults to False.</span>
+<span class="sd">            name_dataset (str, optional): Name of the patterns to save. Defaults to &quot;&quot;.</span>
+<span class="sd">            path_model (str, optional): Path of the folder to save the patterns. Defaults to &quot;&quot;.</span>
+<span class="sd">            concat (bool, optional): Process a chunck of files per thread instead of one file per thread. Increase the performance due to the poor multiprocessing performance of Python. Defaults to True.</span>
+<span class="sd">    </span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="k">def</span> <span class="nf">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">list_files</span> <span class="p">:</span> <span class="nb">list</span><span class="p">,</span> <span class="n">dict_patterns</span><span class="o">=</span><span class="p">{},</span> <span class="n">path_data</span><span class="o">=</span><span class="s2">&quot;&quot;</span><span class="p">,</span> <span class="n">saving</span><span class="o">=</span><span class="kc">False</span><span class="p">,</span> <span class="n">name_dataset</span><span class="o">=</span><span class="s2">&quot;&quot;</span><span class="p">,</span> <span class="n">path_model</span><span class="o">=</span><span class="s2">&quot;&quot;</span><span class="p">,</span> <span class="n">concat</span><span class="o">=</span><span class="kc">True</span><span class="p">):</span>
+        <span class="k">assert</span> <span class="n">list_files</span> <span class="o">!=</span> <span class="p">[]</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">list_journal</span> <span class="p">:</span> <span class="n">List</span><span class="p">[</span><span class="nb">str</span><span class="p">]</span> <span class="o">=</span> <span class="p">[]</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">list_files</span> <span class="o">=</span> <span class="n">list_files</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">counter_general_per_cardinality</span> <span class="p">:</span> <span class="n">Dict</span><span class="p">[</span><span class="nb">int</span><span class="p">,</span> <span class="n">Dict</span><span class="p">[</span><span class="nb">set</span><span class="p">,</span> <span class="nb">int</span><span class="p">]]</span> <span class="o">=</span> <span class="p">{}</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">dict_patterns</span> <span class="o">=</span> <span class="n">dict_patterns</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">path_data</span> <span class="o">=</span> <span class="n">path_data</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">path_model</span> <span class="o">=</span> <span class="n">path_model</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">saving</span> <span class="o">=</span> <span class="n">saving</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">concat</span> <span class="o">=</span> <span class="n">concat</span>
+        <span class="k">if</span> <span class="n">name_dataset</span> <span class="o">==</span> <span class="s2">&quot;&quot;</span><span class="p">:</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">name_dataset</span> <span class="o">=</span> <span class="s1">&#39;&#39;</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="n">random</span><span class="o">.</span><span class="n">choices</span><span class="p">(</span><span class="n">string</span><span class="o">.</span><span class="n">ascii_uppercase</span> <span class="o">+</span> <span class="n">string</span><span class="o">.</span><span class="n">ascii_lowercase</span> <span class="o">+</span> <span class="n">string</span><span class="o">.</span><span class="n">digits</span><span class="p">,</span> <span class="n">k</span><span class="o">=</span><span class="mi">10</span><span class="p">))</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">name_dataset</span> <span class="o">=</span> <span class="n">name_dataset</span>
+        <span class="k">if</span> <span class="nb">len</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">dict_patterns</span><span class="p">)</span> <span class="o">&gt;</span> <span class="mi">0</span><span class="p">:</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">list_patterns</span> <span class="p">:</span> <span class="n">List</span><span class="p">[</span><span class="nb">str</span><span class="p">]</span> <span class="o">=</span> <span class="p">[]</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">read_files_associating</span><span class="p">()</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">read_files_parsing</span><span class="p">(</span><span class="n">concat</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">concat</span><span class="p">)</span>
+
+<div class="viewcode-block" id="Dataset.read_files_parsing"><a class="viewcode-back" href="../../../docs/logsparser/doc.html#logflow.logsparser.Dataset.Dataset.read_files_parsing">[docs]</a>    <span class="k">def</span> <span class="nf">read_files_parsing</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">multithreading</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span> <span class="n">concat</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span> <span class="n">nb_files_per_chunck</span><span class="o">=</span><span class="mi">50</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;Read the files and compute the patterns.</span>
+
+<span class="sd">        If a first step, the function merges the list of files into a list of chunck. Each chunck contains nb_files_per_chunck files. It is done to</span>
+<span class="sd">        increase the performance due to pickle/unpickle poor performance between process using Python.</span>
+
+<span class="sd">        This function executes the run() method of the Journal class for each chunck of files.</span>
+<span class="sd">        </span>
+<span class="sd">        Note that we only provide a multithreading implementation for the moment.</span>
+
+<span class="sd">        Args:</span>
+<span class="sd">            multithreading (bool, optional): Use the multithreading implementation. Defaults to True.</span>
+<span class="sd">            concat (bool, optional): Use a chunck of files per thread instead of one file per thread. Defaults to True.</span>
+<span class="sd">            nb_files_per_chunck (int, optional): Number of files per chunck. Defaults to 50.</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="k">if</span> <span class="n">multithreading</span><span class="p">:</span>
+            <span class="n">logger</span><span class="o">.</span><span class="n">info</span><span class="p">(</span><span class="s2">&quot;Multithreading is activated, using all CPUs available&quot;</span><span class="p">)</span>
+            <span class="k">if</span> <span class="n">concat</span><span class="p">:</span>
+                <span class="bp">self</span><span class="o">.</span><span class="n">list_files</span> <span class="o">=</span> <span class="p">[</span><span class="bp">self</span><span class="o">.</span><span class="n">list_files</span><span class="p">[</span><span class="n">i</span><span class="p">:</span><span class="n">i</span> <span class="o">+</span> <span class="n">nb_files_per_chunck</span><span class="p">]</span> <span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="mi">0</span><span class="p">,</span> <span class="nb">len</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">list_files</span><span class="p">),</span> <span class="n">nb_files_per_chunck</span><span class="p">)]</span>
+                <span class="n">logger</span><span class="o">.</span><span class="n">info</span><span class="p">(</span><span class="s2">&quot;Starting &quot;</span> <span class="o">+</span><span class="nb">str</span><span class="p">(</span><span class="nb">len</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">list_files</span><span class="p">))</span><span class="o">+</span> <span class="s2">&quot; chunks&quot;</span><span class="p">)</span>
+            <span class="k">else</span><span class="p">:</span>
+                <span class="bp">self</span><span class="o">.</span><span class="n">list_files</span> <span class="o">=</span> <span class="p">[</span><span class="bp">self</span><span class="o">.</span><span class="n">list_files</span><span class="p">]</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">list_journal</span> <span class="o">=</span> <span class="p">[</span><span class="n">Journal</span><span class="p">(</span><span class="n">path</span><span class="o">=</span><span class="n">path</span><span class="p">,</span> <span class="n">parser_message</span><span class="o">=</span><span class="n">Dataset</span><span class="o">.</span><span class="n">parser_message</span><span class="p">)</span> <span class="k">for</span> <span class="n">path</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">list_files</span><span class="p">]</span>
+            <span class="n">nb_logs</span> <span class="o">=</span> <span class="mi">0</span>
+            <span class="n">nb_counter</span> <span class="o">=</span> <span class="mi">0</span>
+            <span class="k">with</span> <span class="n">Pool</span><span class="p">()</span> <span class="k">as</span> <span class="n">mp</span><span class="p">:</span>
+                <span class="k">for</span> <span class="n">journal</span> <span class="ow">in</span> <span class="n">tqdm</span><span class="p">(</span><span class="n">mp</span><span class="o">.</span><span class="n">imap_unordered</span><span class="p">(</span><span class="n">Dataset</span><span class="o">.</span><span class="n">execute</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">list_journal</span><span class="p">),</span> <span class="n">total</span><span class="o">=</span><span class="nb">len</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">list_journal</span><span class="p">)):</span>
+                    <span class="k">for</span> <span class="n">entry</span> <span class="ow">in</span> <span class="n">journal</span><span class="o">.</span><span class="n">counter_logs</span><span class="p">:</span>
+                        <span class="c1"># A cardinality describes the number of words in a line of log.</span>
+                        <span class="bp">self</span><span class="o">.</span><span class="n">counter_general_per_cardinality</span><span class="o">.</span><span class="n">setdefault</span><span class="p">(</span><span class="nb">len</span><span class="p">(</span><span class="n">entry</span><span class="p">),</span> <span class="p">{})</span>
+                        <span class="c1"># We keep only one entry per line of descriptors</span>
+                        <span class="bp">self</span><span class="o">.</span><span class="n">counter_general_per_cardinality</span><span class="p">[</span><span class="nb">len</span><span class="p">(</span><span class="n">entry</span><span class="p">)]</span><span class="o">.</span><span class="n">setdefault</span><span class="p">(</span><span class="n">entry</span><span class="p">,</span> <span class="mi">0</span><span class="p">)</span>
+                        <span class="c1"># We add the number of this line of descriptors to count the words.</span>
+                        <span class="bp">self</span><span class="o">.</span><span class="n">counter_general_per_cardinality</span><span class="p">[</span><span class="nb">len</span><span class="p">(</span><span class="n">entry</span><span class="p">)][</span><span class="n">entry</span><span class="p">]</span> <span class="o">+=</span> <span class="n">journal</span><span class="o">.</span><span class="n">counter_logs</span><span class="p">[</span><span class="n">entry</span><span class="p">]</span>
+                        <span class="n">nb_logs</span> <span class="o">+=</span> <span class="n">journal</span><span class="o">.</span><span class="n">counter_logs</span><span class="p">[</span><span class="n">entry</span><span class="p">]</span>
+            <span class="k">for</span> <span class="n">value</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">counter_general_per_cardinality</span><span class="p">:</span>
+                <span class="n">nb_counter</span> <span class="o">+=</span> <span class="nb">len</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">counter_general_per_cardinality</span><span class="p">[</span><span class="n">value</span><span class="p">])</span>
+            <span class="n">logger</span><span class="o">.</span><span class="n">debug</span><span class="p">(</span><span class="s2">&quot;Parser &quot;</span> <span class="o">+</span> <span class="nb">str</span><span class="p">(</span><span class="n">nb_logs</span><span class="p">)</span> <span class="o">+</span> <span class="s2">&quot; logs with &quot;</span> <span class="o">+</span> <span class="nb">str</span><span class="p">(</span><span class="n">nb_counter</span><span class="p">)</span> <span class="o">+</span> <span class="s2">&quot; counter and &quot;</span> <span class="o">+</span> <span class="nb">str</span><span class="p">(</span><span class="nb">len</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">counter_general_per_cardinality</span><span class="p">))</span> <span class="o">+</span> <span class="s2">&quot; cardinalities&quot;</span><span class="p">)</span></div>
+
+<div class="viewcode-block" id="Dataset.read_files_associating"><a class="viewcode-back" href="../../../docs/logsparser/doc.html#logflow.logsparser.Dataset.Dataset.read_files_associating">[docs]</a>    <span class="k">def</span> <span class="nf">read_files_associating</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">multithreading</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span> <span class="n">concat</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span> <span class="n">nb_files_per_chunck</span><span class="o">=</span><span class="mi">50</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;Read the files and associate one pattern to each line of the files.</span>
+
+<span class="sd">        If a first step, the function merges the list of files into a list of chunck. Each chunck contains nb_files_per_chunck files. It is done to</span>
+<span class="sd">        increase the performance due to pickle/unpickle poor performance between process using Python.</span>
+
+<span class="sd">        This function executes the run() method of the Journal class for each chunck of files.</span>
+<span class="sd">        </span>
+<span class="sd">        Note that we only provide a multithreading implementation for the moment.</span>
+
+<span class="sd">        Args:</span>
+<span class="sd">            multithreading (bool, optional): [Use the multithreading implementation]. Defaults to True.</span>
+<span class="sd">            concat (bool, optional): [Use a chunck of files per thread instead of one file per thread]. Defaults to True.</span>
+<span class="sd">            nb_files_per_chunck (int, optional): [Number of files per chunck]. Defaults to 50.</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="k">if</span> <span class="n">multithreading</span><span class="p">:</span>
+            <span class="n">logger</span><span class="o">.</span><span class="n">info</span><span class="p">(</span><span class="s2">&quot;Multithreading is activated, using all CPUs available&quot;</span><span class="p">)</span>
+            <span class="k">if</span> <span class="n">concat</span><span class="p">:</span>
+                <span class="bp">self</span><span class="o">.</span><span class="n">list_files</span> <span class="o">=</span> <span class="p">[</span><span class="bp">self</span><span class="o">.</span><span class="n">list_files</span><span class="p">[</span><span class="n">i</span><span class="p">:</span><span class="n">i</span> <span class="o">+</span> <span class="n">nb_files_per_chunck</span><span class="p">]</span> <span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="mi">0</span><span class="p">,</span> <span class="nb">len</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">list_files</span><span class="p">),</span> <span class="n">nb_files_per_chunck</span><span class="p">)]</span>
+                <span class="n">logger</span><span class="o">.</span><span class="n">info</span><span class="p">(</span><span class="s2">&quot;Starting &quot;</span> <span class="o">+</span><span class="nb">str</span><span class="p">(</span><span class="nb">len</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">list_files</span><span class="p">))</span><span class="o">+</span> <span class="s2">&quot; chunks&quot;</span><span class="p">)</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">list_journal</span> <span class="o">=</span> <span class="p">[</span><span class="n">Journal</span><span class="p">(</span><span class="n">path</span><span class="o">=</span><span class="n">path</span><span class="p">,</span> <span class="n">parser_message</span><span class="o">=</span><span class="n">Dataset</span><span class="o">.</span><span class="n">parser_message</span><span class="p">,</span> <span class="n">associated_pattern</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span> <span class="n">dict_patterns</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">dict_patterns</span><span class="p">)</span> <span class="k">for</span> <span class="n">path</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">list_files</span><span class="p">]</span>
+            <span class="k">with</span> <span class="n">Pool</span><span class="p">()</span> <span class="k">as</span> <span class="n">mp</span><span class="p">:</span>
+                <span class="k">for</span> <span class="n">journal</span> <span class="ow">in</span> <span class="n">tqdm</span><span class="p">(</span><span class="n">mp</span><span class="o">.</span><span class="n">imap_unordered</span><span class="p">(</span><span class="n">Dataset</span><span class="o">.</span><span class="n">execute</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">list_journal</span><span class="p">),</span> <span class="n">total</span><span class="o">=</span><span class="nb">len</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">list_journal</span><span class="p">)):</span>
+                    <span class="bp">self</span><span class="o">.</span><span class="n">list_patterns</span> <span class="o">+=</span> <span class="n">journal</span><span class="o">.</span><span class="n">list_patterns</span>
+        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">saving</span><span class="p">:</span>
+            <span class="k">assert</span> <span class="bp">self</span><span class="o">.</span><span class="n">path_data</span> <span class="o">!=</span> <span class="s2">&quot;&quot;</span>
+            <span class="c1"># h5py is more optimized than classical pickle</span>
+            <span class="n">f</span> <span class="o">=</span> <span class="n">h5py</span><span class="o">.</span><span class="n">File</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">path_data</span> <span class="o">+</span> <span class="bp">self</span><span class="o">.</span><span class="n">name_dataset</span> <span class="o">+</span> <span class="s2">&quot;.lf&quot;</span><span class="p">,</span> <span class="s2">&quot;w&quot;</span><span class="p">)</span>
+            <span class="n">f</span><span class="o">.</span><span class="n">create_dataset</span><span class="p">(</span><span class="s1">&#39;list_patterns&#39;</span><span class="p">,</span> <span class="n">data</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">list_patterns</span><span class="p">)</span>
+            <span class="n">f</span><span class="o">.</span><span class="n">close</span><span class="p">()</span>
+            <span class="c1"># pickle is a better classical way</span>
+            <span class="k">with</span> <span class="nb">open</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">path_model</span> <span class="o">+</span> <span class="bp">self</span><span class="o">.</span><span class="n">name_dataset</span> <span class="o">+</span> <span class="s2">&quot;_model.lf&quot;</span><span class="p">,</span> <span class="s2">&quot;wb&quot;</span><span class="p">)</span> <span class="k">as</span> <span class="n">output_file</span><span class="p">:</span>
+                <span class="n">dict_model</span> <span class="o">=</span> <span class="p">{}</span>
+                <span class="n">dict_model</span><span class="p">[</span><span class="s2">&quot;dict_patterns&quot;</span><span class="p">]</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">dict_patterns</span>
+                <span class="n">dict_model</span><span class="p">[</span><span class="s2">&quot;counter_patterns&quot;</span><span class="p">]</span> <span class="o">=</span> <span class="n">Counter</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">list_patterns</span><span class="p">)</span>
+                <span class="n">pickle</span><span class="o">.</span><span class="n">dump</span><span class="p">(</span><span class="n">dict_model</span><span class="p">,</span> <span class="n">output_file</span><span class="p">)</span></div>
+
+<div class="viewcode-block" id="Dataset.parser_message"><a class="viewcode-back" href="../../../docs/logsparser/doc.html#logflow.logsparser.Dataset.Dataset.parser_message">[docs]</a>    <span class="nd">@staticmethod</span>
+    <span class="k">def</span> <span class="nf">parser_message</span><span class="p">(</span><span class="n">line</span> <span class="p">:</span> <span class="nb">str</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">List</span><span class="p">[</span><span class="nb">str</span><span class="p">]:</span>
+        <span class="sd">&quot;&quot;&quot;Split the line of log and return the message part</span>
+
+<span class="sd">        Args:</span>
+<span class="sd">            line (str): the line of log</span>
+
+<span class="sd">        Returns:</span>
+<span class="sd">            list: the message part of the line represented as a list of words.</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="n">message_split</span> <span class="o">=</span> <span class="n">line</span><span class="o">.</span><span class="n">strip</span><span class="p">()</span><span class="o">.</span><span class="n">split</span><span class="p">()</span>
+        <span class="k">return</span> <span class="n">message_split</span><span class="p">[</span><span class="mi">9</span><span class="p">:]</span></div>
+
+<div class="viewcode-block" id="Dataset.execute"><a class="viewcode-back" href="../../../docs/logsparser/doc.html#logflow.logsparser.Dataset.Dataset.execute">[docs]</a>    <span class="nd">@staticmethod</span>
+    <span class="k">def</span> <span class="nf">execute</span><span class="p">(</span><span class="n">journal</span> <span class="p">:</span> <span class="n">Journal</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">Journal</span><span class="p">:</span>
+        <span class="sd">&quot;&quot;&quot;Execute the run() function of the Journal class. It uses for the multithreading implementation.</span>
+
+<span class="sd">        Args:</span>
+<span class="sd">            journal (Journal): A journal to process</span>
+
+<span class="sd">        Returns:</span>
+<span class="sd">            Journal: A processed journal</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="n">journal</span><span class="o">.</span><span class="n">run</span><span class="p">()</span>
+        <span class="k">return</span> <span class="n">journal</span></div></div>
+</pre></div>
+
+          </div>
+        </div>
+      </div>
+      <div class="sphinxsidebar" role="navigation" aria-label="main navigation">
+        <div class="sphinxsidebarwrapper"><div class="relations">
+<h3>Related Topics</h3>
+<ul>
+  <li><a href="../../../index.html">Documentation overview</a><ul>
+  <li><a href="../../index.html">Module code</a><ul>
+  </ul></li>
+  </ul></li>
+</ul>
+</div>
+<div id="searchbox" style="display: none" role="search">
+  <h3>Quick search</h3>
+    <form class="search" action="../../../search.html" method="get">
+      <div><input type="text" name="q" /></div>
+      <div><input type="submit" value="Go" /></div>
+      <input type="hidden" name="check_keywords" value="yes" />
+      <input type="hidden" name="area" value="default" />
+    </form>
+</div>
+<script type="text/javascript">$('#searchbox').show(0);</script>
+        </div>
+      </div>
+      <div class="clearer"></div>
+    </div>
+    <div class="footer">
+      &copy;2020, Marc Platini.
+      
+      |
+      Powered by <a href="http://sphinx-doc.org/">Sphinx 1.6.7</a>
+      &amp; <a href="https://github.com/bitprophet/alabaster">Alabaster 0.7.8</a>
+      
+    </div>
+
+    
+
+    
+  </body>
+</html>

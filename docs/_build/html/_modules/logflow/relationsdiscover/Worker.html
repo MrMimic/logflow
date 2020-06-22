@@ -1,0 +1,184 @@
+
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN"
+  "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+
+<html xmlns="http://www.w3.org/1999/xhtml">
+  <head>
+    <meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
+    <title>logflow.relationsdiscover.Worker &#8212; LogFlow 0.1 documentation</title>
+    <link rel="stylesheet" href="../../../_static/alabaster.css" type="text/css" />
+    <link rel="stylesheet" href="../../../_static/pygments.css" type="text/css" />
+    <script type="text/javascript">
+      var DOCUMENTATION_OPTIONS = {
+        URL_ROOT:    '../../../',
+        VERSION:     '0.1',
+        COLLAPSE_INDEX: false,
+        FILE_SUFFIX: '.html',
+        HAS_SOURCE:  true,
+        SOURCELINK_SUFFIX: '.txt'
+      };
+    </script>
+    <script type="text/javascript" src="../../../_static/jquery.js"></script>
+    <script type="text/javascript" src="../../../_static/underscore.js"></script>
+    <script type="text/javascript" src="../../../_static/doctools.js"></script>
+    <link rel="index" title="Index" href="../../../genindex.html" />
+    <link rel="search" title="Search" href="../../../search.html" />
+   
+  <link rel="stylesheet" href="../../../_static/custom.css" type="text/css" />
+  
+  <meta name="viewport" content="width=device-width, initial-scale=0.9, maximum-scale=0.9" />
+
+  </head>
+  <body>
+  
+
+    <div class="document">
+      <div class="documentwrapper">
+        <div class="bodywrapper">
+          <div class="body" role="main">
+            
+  <h1>Source code for logflow.relationsdiscover.Worker</h1><div class="highlight"><pre>
+<span></span><span class="kn">import</span> <span class="nn">torch.multiprocessing</span>
+<span class="kn">from</span> <span class="nn">logflow.relationsdiscover.Worker_per_cardinality</span> <span class="k">import</span> <span class="n">Worker_single</span>
+<span class="kn">from</span> <span class="nn">logflow.relationsdiscover.Cardinality</span> <span class="k">import</span> <span class="n">Cardinality</span>
+<span class="kn">import</span> <span class="nn">os</span>
+<span class="kn">from</span> <span class="nn">loguru</span> <span class="k">import</span> <span class="n">logger</span>
+<span class="kn">from</span> <span class="nn">typing</span> <span class="k">import</span> <span class="n">List</span>
+
+<div class="viewcode-block" id="Worker"><a class="viewcode-back" href="../../../docs/relationsdiscover/doc.html#logflow.relationsdiscover.Worker.Worker">[docs]</a><span class="k">class</span> <span class="nc">Worker</span><span class="p">:</span>
+    <span class="sd">&quot;&quot;&quot;Handle the learning and the testing of each worker_per_cardinality in a multithreading way. </span>
+
+<span class="sd">    Args:</span>
+<span class="sd">        list_cardinalities (List[Cardinality]): list of the cardinality objects to be used.</span>
+<span class="sd">        batch_size (int, optional): size of the batch. Defaults to 128.</span>
+<span class="sd">        multithreading (bool, optional): use a multithreading implementation. Sequential implementation is not available yet. Defaults to True.</span>
+<span class="sd">        path_model (str, optional): path to the model to save. Defaults to &quot;&quot;.</span>
+<span class="sd">        name_dataset (str, optional): name of the dataset. Defaults to &quot;&quot;.</span>
+<span class="sd">        cardinalities_choosen (List[int], optional): list of cardinalities to use. This list contains only the value of cardinalities to be used. Defaults to [-1].</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+
+    <span class="k">def</span> <span class="nf">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">list_cardinalities</span> <span class="p">:</span> <span class="n">List</span><span class="p">[</span><span class="n">Cardinality</span><span class="p">],</span> <span class="n">batch_size</span><span class="o">=</span><span class="mi">128</span><span class="p">,</span> <span class="n">multithreading</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span> <span class="n">path_model</span><span class="o">=</span><span class="s2">&quot;&quot;</span><span class="p">,</span> <span class="n">name_dataset</span><span class="o">=</span><span class="s2">&quot;&quot;</span><span class="p">,</span> <span class="n">cardinalities_choosen</span><span class="o">=</span><span class="p">[</span><span class="o">-</span><span class="mi">1</span><span class="p">]):</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">list_cardinalities</span> <span class="o">=</span> <span class="n">list_cardinalities</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">batch_size</span> <span class="o">=</span> <span class="n">batch_size</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">multithreading</span> <span class="o">=</span> <span class="n">multithreading</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">workers</span> <span class="p">:</span> <span class="n">List</span><span class="p">[</span><span class="n">Worker_single</span><span class="p">]</span><span class="o">=</span> <span class="p">[]</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">path_model</span><span class="o">=</span> <span class="n">path_model</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">name_dataset</span> <span class="o">=</span> <span class="n">name_dataset</span>
+        <span class="k">if</span> <span class="n">cardinalities_choosen</span> <span class="o">!=</span> <span class="o">-</span><span class="mi">1</span><span class="p">:</span>
+            <span class="n">list_cardinalities_tmp</span> <span class="o">=</span> <span class="p">[]</span>
+            <span class="k">for</span> <span class="n">cardinality</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">list_cardinalities</span><span class="p">:</span>
+                <span class="k">if</span> <span class="n">cardinality</span><span class="o">.</span><span class="n">cardinality</span> <span class="ow">in</span> <span class="n">cardinalities_choosen</span><span class="p">:</span>
+                    <span class="n">list_cardinalities_tmp</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">cardinality</span><span class="p">)</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">list_cardinalities</span> <span class="o">=</span> <span class="n">list_cardinalities_tmp</span>
+        <span class="c1"># Use a specific lock for the multithreading implementation</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">lock</span> <span class="o">=</span> <span class="n">torch</span><span class="o">.</span><span class="n">multiprocessing</span><span class="o">.</span><span class="n">get_context</span><span class="p">(</span><span class="s1">&#39;spawn&#39;</span><span class="p">)</span><span class="o">.</span><span class="n">Lock</span><span class="p">()</span>
+
+<div class="viewcode-block" id="Worker.train"><a class="viewcode-back" href="../../../docs/relationsdiscover/doc.html#logflow.relationsdiscover.Worker.Worker.train">[docs]</a>    <span class="k">def</span> <span class="nf">train</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">resuming</span><span class="o">=</span><span class="kc">False</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;Start the training</span>
+
+<span class="sd">        Args:</span>
+<span class="sd">            resuming (bool, optional): resume from a previous training. Not implemented yet. Defaults to False.</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">workers</span> <span class="o">=</span> <span class="p">[]</span>
+        <span class="k">if</span> <span class="n">resuming</span><span class="p">:</span>
+            <span class="k">assert</span> <span class="bp">self</span><span class="o">.</span><span class="n">path_model</span> <span class="o">!=</span> <span class="s2">&quot;&quot;</span>
+            <span class="k">assert</span> <span class="bp">self</span><span class="o">.</span><span class="n">name_dataset</span> <span class="o">!=</span> <span class="s2">&quot;&quot;</span>
+
+        <span class="k">for</span> <span class="n">cardinality</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">list_cardinalities</span><span class="p">:</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">workers</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">Worker_single</span><span class="p">(</span><span class="n">cardinality</span><span class="o">=</span><span class="n">cardinality</span><span class="p">,</span> <span class="n">batch_size</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">batch_size</span><span class="p">,</span> <span class="n">path_model</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">path_model</span><span class="p">,</span> <span class="n">name_dataset</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">name_dataset</span><span class="p">,</span> <span class="n">lock</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">lock</span><span class="p">))</span>
+        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">multithreading</span><span class="p">:</span>
+            <span class="n">torch</span><span class="o">.</span><span class="n">multiprocessing</span><span class="o">.</span><span class="n">spawn</span><span class="p">(</span><span class="n">Worker</span><span class="o">.</span><span class="n">execute_train</span><span class="p">,</span> <span class="n">args</span><span class="o">=</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">workers</span><span class="p">),</span> <span class="n">daemon</span><span class="o">=</span><span class="kc">False</span><span class="p">,</span> <span class="n">nprocs</span><span class="o">=</span><span class="nb">len</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">workers</span><span class="p">),</span> <span class="n">join</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="k">for</span> <span class="n">worker</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">workers</span><span class="p">:</span>
+                <span class="n">worker</span><span class="o">.</span><span class="n">train</span><span class="p">()</span></div>
+
+<div class="viewcode-block" id="Worker.test"><a class="viewcode-back" href="../../../docs/relationsdiscover/doc.html#logflow.relationsdiscover.Worker.Worker.test">[docs]</a>    <span class="k">def</span> <span class="nf">test</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;Start the testing</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">workers</span> <span class="o">=</span> <span class="p">[]</span>
+        <span class="k">for</span> <span class="n">cardinality</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">list_cardinalities</span><span class="p">:</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">workers</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">Worker_single</span><span class="p">(</span><span class="n">cardinality</span><span class="o">=</span><span class="n">cardinality</span><span class="p">,</span> <span class="n">batch_size</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">batch_size</span><span class="p">,</span> <span class="n">lock</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">lock</span><span class="p">))</span>
+        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">multithreading</span><span class="p">:</span>
+            <span class="n">torch</span><span class="o">.</span><span class="n">multiprocessing</span><span class="o">.</span><span class="n">spawn</span><span class="p">(</span><span class="n">Worker</span><span class="o">.</span><span class="n">execute_test</span><span class="p">,</span> <span class="n">args</span><span class="o">=</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">workers</span><span class="p">),</span> <span class="n">daemon</span><span class="o">=</span><span class="kc">False</span><span class="p">,</span> <span class="n">nprocs</span><span class="o">=</span><span class="nb">len</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">workers</span><span class="p">),</span> <span class="n">join</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="k">for</span> <span class="n">worker</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">workers</span><span class="p">:</span>
+                <span class="n">worker</span><span class="o">.</span><span class="n">test</span><span class="p">()</span></div>
+
+<div class="viewcode-block" id="Worker.execute_test"><a class="viewcode-back" href="../../../docs/relationsdiscover/doc.html#logflow.relationsdiscover.Worker.Worker.execute_test">[docs]</a>    <span class="nd">@staticmethod</span>
+    <span class="k">def</span> <span class="nf">execute_test</span><span class="p">(</span><span class="n">i</span><span class="p">,</span> <span class="o">*</span><span class="n">args</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;Execute the test function for the multithreading implementation</span>
+
+<span class="sd">        Args:</span>
+<span class="sd">            i (int): value of the cardinality selected</span>
+<span class="sd">            args (List[Worker_single]) : list of all the cardinalities</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="n">list_worker</span> <span class="o">=</span> <span class="n">args</span>
+        <span class="n">index</span> <span class="o">=</span> <span class="mi">0</span>
+        <span class="k">for</span> <span class="n">worker</span> <span class="ow">in</span> <span class="n">list_worker</span><span class="p">:</span>
+            <span class="k">if</span> <span class="n">index</span> <span class="o">==</span> <span class="n">i</span><span class="p">:</span>
+                <span class="k">try</span><span class="p">:</span>
+                    <span class="n">worker</span><span class="o">.</span><span class="n">test</span><span class="p">()</span>
+                <span class="k">except</span> <span class="ne">IOError</span><span class="p">:</span>
+                    <span class="n">logger</span><span class="o">.</span><span class="n">critical</span><span class="p">(</span><span class="s2">&quot;Cardinality &quot;</span> <span class="o">+</span> <span class="nb">str</span><span class="p">(</span><span class="n">worker</span><span class="o">.</span><span class="n">cardinality</span><span class="p">)</span> <span class="o">+</span> <span class="s2">&quot; Error when loading file&quot;</span><span class="p">)</span>
+            <span class="n">index</span> <span class="o">+=</span> <span class="mi">1</span></div>
+
+<div class="viewcode-block" id="Worker.execute_train"><a class="viewcode-back" href="../../../docs/relationsdiscover/doc.html#logflow.relationsdiscover.Worker.Worker.execute_train">[docs]</a>    <span class="nd">@staticmethod</span>
+    <span class="k">def</span> <span class="nf">execute_train</span><span class="p">(</span><span class="n">i</span><span class="p">,</span> <span class="o">*</span><span class="n">args</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;Execute the training function for the multithreading implementation</span>
+
+<span class="sd">        Args:</span>
+<span class="sd">            i (int): value of the cardinality selected</span>
+<span class="sd">            args (List[Worker_single]) : list of all the cardinalities</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="n">list_worker</span> <span class="o">=</span> <span class="n">args</span>
+        <span class="n">index</span> <span class="o">=</span> <span class="mi">0</span>
+        <span class="k">for</span> <span class="n">worker</span> <span class="ow">in</span> <span class="n">list_worker</span><span class="p">:</span>
+            <span class="k">if</span> <span class="n">index</span> <span class="o">==</span> <span class="n">i</span><span class="p">:</span>
+                <span class="k">try</span><span class="p">:</span>
+                    <span class="n">worker</span><span class="o">.</span><span class="n">train</span><span class="p">()</span>
+                <span class="k">except</span> <span class="ne">IOError</span><span class="p">:</span>
+                    <span class="n">logger</span><span class="o">.</span><span class="n">critical</span><span class="p">(</span><span class="s2">&quot;Cardinality &quot;</span> <span class="o">+</span> <span class="nb">str</span><span class="p">(</span><span class="n">worker</span><span class="o">.</span><span class="n">cardinality</span><span class="p">)</span> <span class="o">+</span> <span class="s2">&quot; Error when loading file&quot;</span><span class="p">)</span>
+            <span class="n">index</span> <span class="o">+=</span> <span class="mi">1</span></div></div>
+</pre></div>
+
+          </div>
+        </div>
+      </div>
+      <div class="sphinxsidebar" role="navigation" aria-label="main navigation">
+        <div class="sphinxsidebarwrapper"><div class="relations">
+<h3>Related Topics</h3>
+<ul>
+  <li><a href="../../../index.html">Documentation overview</a><ul>
+  <li><a href="../../index.html">Module code</a><ul>
+  </ul></li>
+  </ul></li>
+</ul>
+</div>
+<div id="searchbox" style="display: none" role="search">
+  <h3>Quick search</h3>
+    <form class="search" action="../../../search.html" method="get">
+      <div><input type="text" name="q" /></div>
+      <div><input type="submit" value="Go" /></div>
+      <input type="hidden" name="check_keywords" value="yes" />
+      <input type="hidden" name="area" value="default" />
+    </form>
+</div>
+<script type="text/javascript">$('#searchbox').show(0);</script>
+        </div>
+      </div>
+      <div class="clearer"></div>
+    </div>
+    <div class="footer">
+      &copy;2020, Marc Platini.
+      
+      |
+      Powered by <a href="http://sphinx-doc.org/">Sphinx 1.6.7</a>
+      &amp; <a href="https://github.com/bitprophet/alabaster">Alabaster 0.7.8</a>
+      
+    </div>
+
+    
+
+    
+  </body>
+</html>

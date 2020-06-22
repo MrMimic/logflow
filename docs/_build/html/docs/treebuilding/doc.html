@@ -1,0 +1,467 @@
+
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN"
+  "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+
+<html xmlns="http://www.w3.org/1999/xhtml">
+  <head>
+    <meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
+    <title>TreeBuilding documentation &#8212; LogFlow 0.1 documentation</title>
+    <link rel="stylesheet" href="../../_static/alabaster.css" type="text/css" />
+    <link rel="stylesheet" href="../../_static/pygments.css" type="text/css" />
+    <script type="text/javascript">
+      var DOCUMENTATION_OPTIONS = {
+        URL_ROOT:    '../../',
+        VERSION:     '0.1',
+        COLLAPSE_INDEX: false,
+        FILE_SUFFIX: '.html',
+        HAS_SOURCE:  true,
+        SOURCELINK_SUFFIX: '.txt'
+      };
+    </script>
+    <script type="text/javascript" src="../../_static/jquery.js"></script>
+    <script type="text/javascript" src="../../_static/underscore.js"></script>
+    <script type="text/javascript" src="../../_static/doctools.js"></script>
+    <link rel="index" title="Index" href="../../genindex.html" />
+    <link rel="search" title="Search" href="../../search.html" />
+    <link rel="prev" title="Relationsdiscover documentation" href="../relationsdiscover/doc.html" />
+   
+  <link rel="stylesheet" href="../../_static/custom.css" type="text/css" />
+  
+  <meta name="viewport" content="width=device-width, initial-scale=0.9, maximum-scale=0.9" />
+
+  </head>
+  <body>
+  
+
+    <div class="document">
+      <div class="documentwrapper">
+        <div class="bodywrapper">
+          <div class="body" role="main">
+            
+  <div class="section" id="module-logflow.treebuilding.Dataset">
+<span id="treebuilding-documentation"></span><h1>TreeBuilding documentation<a class="headerlink" href="#module-logflow.treebuilding.Dataset" title="Permalink to this headline">¶</a></h1>
+<dl class="class">
+<dt id="logflow.treebuilding.Dataset.Dataset">
+<em class="property">class </em><code class="descclassname">logflow.treebuilding.Dataset.</code><code class="descname">Dataset</code><span class="sig-paren">(</span><em>path_model=''</em>, <em>name_model=''</em>, <em>index_line_max=inf</em>, <em>path_data=''</em><span class="sig-paren">)</span><a class="reference internal" href="../../_modules/logflow/treebuilding/Dataset.html#Dataset"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#logflow.treebuilding.Dataset.Dataset" title="Permalink to this definition">¶</a></dt>
+<dd><p>A dataset is an object containing the data. It is used to load the files and to compute the window for each new prediction on a log.</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><ul class="first last simple">
+<li><strong>path_model</strong> (<em>str</em><em>, </em><em>optional</em>) – path to the model to load. Defaults to “”.</li>
+<li><strong>name_model</strong> (<em>str</em><em>, </em><em>optional</em>) – name of the model to load. Defaults to “”.</li>
+<li><strong>index_line_max</strong> (<em>int</em><em>, </em><em>optional</em>) – load only the lines with a lower index in the file. Avoid to load all the lines. Defaults to float(“+inf”).</li>
+<li><strong>path_data</strong> (<em>str</em><em>, </em><em>optional</em>) – path to the logs. Defaults to “”.</li>
+</ul>
+</td>
+</tr>
+</tbody>
+</table>
+<dl class="method">
+<dt id="logflow.treebuilding.Dataset.Dataset.get_slice">
+<code class="descname">get_slice</code><span class="sig-paren">(</span><em>index_line=-1</em><span class="sig-paren">)</span><a class="reference internal" href="../../_modules/logflow/treebuilding/Dataset.html#Dataset.get_slice"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#logflow.treebuilding.Dataset.Dataset.get_slice" title="Permalink to this definition">¶</a></dt>
+<dd><p>Get the window associated with the line at the index_line.</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><strong>index_line</strong> (<em>int</em><em>, </em><em>optional</em>) – index of the line. Defaults to -1.</td>
+</tr>
+<tr class="field-even field"><th class="field-name">Returns:</th><td class="field-body">return the log object with the slice added. If an error occurs, return -1.</td>
+</tr>
+<tr class="field-odd field"><th class="field-name">Return type:</th><td class="field-body"><a class="reference internal" href="#module-logflow.treebuilding.Log" title="logflow.treebuilding.Log">Log</a></td>
+</tr>
+</tbody>
+</table>
+</dd></dl>
+
+<dl class="method">
+<dt id="logflow.treebuilding.Dataset.Dataset.load_files">
+<code class="descname">load_files</code><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="reference internal" href="../../_modules/logflow/treebuilding/Dataset.html#Dataset.load_files"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#logflow.treebuilding.Dataset.Dataset.load_files" title="Permalink to this definition">¶</a></dt>
+<dd><p>Load the files including word2vec, LSTM, counter and patterns.</p>
+</dd></dl>
+
+<dl class="method">
+<dt id="logflow.treebuilding.Dataset.Dataset.load_logs">
+<code class="descname">load_logs</code><span class="sig-paren">(</span><em>index_line_max=inf</em><span class="sig-paren">)</span><a class="reference internal" href="../../_modules/logflow/treebuilding/Dataset.html#Dataset.load_logs"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#logflow.treebuilding.Dataset.Dataset.load_logs" title="Permalink to this definition">¶</a></dt>
+<dd><p>Load the selected logs file up to the index_line_max.</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><strong>index_line_max</strong> (<em>int</em><em>, </em><em>optional</em>) – load only the lines with a lower index in the file. Avoid to load all the lines. Defaults to float(“+inf”).</td>
+</tr>
+</tbody>
+</table>
+</dd></dl>
+
+<dl class="method">
+<dt id="logflow.treebuilding.Dataset.Dataset.show_selected_lines">
+<code class="descname">show_selected_lines</code><span class="sig-paren">(</span><em>index_line: int</em>, <em>range_line=100</em><span class="sig-paren">)</span><a class="reference internal" href="../../_modules/logflow/treebuilding/Dataset.html#Dataset.show_selected_lines"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#logflow.treebuilding.Dataset.Dataset.show_selected_lines" title="Permalink to this definition">¶</a></dt>
+<dd><p>Show the selected and the range_line previous lines</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><ul class="first last simple">
+<li><strong>index_line</strong> (<em>int</em>) – the index of the selected line</li>
+<li><strong>range_line</strong> (<em>int</em><em>, </em><em>optional</em>) – number of previous lines to print. Defaults to 100.</li>
+</ul>
+</td>
+</tr>
+</tbody>
+</table>
+</dd></dl>
+
+</dd></dl>
+
+<span class="target" id="module-logflow.treebuilding.Inference"></span><dl class="class">
+<dt id="logflow.treebuilding.Inference.Inference">
+<em class="property">class </em><code class="descclassname">logflow.treebuilding.Inference.</code><code class="descname">Inference</code><span class="sig-paren">(</span><em>models: typing.List</em><span class="sig-paren">)</span><a class="reference internal" href="../../_modules/logflow/treebuilding/Inference.html#Inference"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#logflow.treebuilding.Inference.Inference" title="Permalink to this definition">¶</a></dt>
+<dd><p>Manages the deep learning model, and run the inference through it.</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><strong>models</strong> (<em>List</em>) – list of the learned model to load.</td>
+</tr>
+</tbody>
+</table>
+<dl class="method">
+<dt id="logflow.treebuilding.Inference.Inference.probability">
+<code class="descname">probability</code><span class="sig-paren">(</span><em>x: typing.List[float]</em><span class="sig-paren">)</span> &#x2192; typing.List[float]<a class="reference internal" href="../../_modules/logflow/treebuilding/Inference.html#Inference.probability"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#logflow.treebuilding.Inference.Inference.probability" title="Permalink to this definition">¶</a></dt>
+<dd><p>Compute probability (ie 0 =&lt; proba =&lt; 1) values for each sets of scores in x.</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><strong>x</strong> (<em>List</em><em>[</em><em>float</em><em>]</em>) – list of values. Here, it is used at the output of the attention layer</td>
+</tr>
+<tr class="field-even field"><th class="field-name">Returns:</th><td class="field-body">list of probabilities</td>
+</tr>
+<tr class="field-odd field"><th class="field-name">Return type:</th><td class="field-body">List[float]</td>
+</tr>
+</tbody>
+</table>
+</dd></dl>
+
+<dl class="method">
+<dt id="logflow.treebuilding.Inference.Inference.test">
+<code class="descname">test</code><span class="sig-paren">(</span><em>data: typing.List[typing.List[float]], log: logflow.treebuilding.Log.Log</em><span class="sig-paren">)</span> &#x2192; typing.List<a class="reference internal" href="../../_modules/logflow/treebuilding/Inference.html#Inference.test"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#logflow.treebuilding.Inference.Inference.test" title="Permalink to this definition">¶</a></dt>
+<dd><p>Run the inference through the model and return only the value greater than the threshold.</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><ul class="first simple">
+<li><strong>data</strong> (<em>List</em><em>[</em><em>List</em><em>[</em><em>float</em><em>]</em><em>]</em>) – vector to be used as an input</li>
+<li><strong>log</strong> (<a class="reference internal" href="#module-logflow.treebuilding.Log" title="logflow.treebuilding.Log"><em>Log</em></a>) – log to predict</li>
+</ul>
+</td>
+</tr>
+<tr class="field-even field"><th class="field-name">Returns:</th><td class="field-body"><p class="first">list of the log with a weigth greater than the threshold.</p>
+</td>
+</tr>
+<tr class="field-odd field"><th class="field-name">Return type:</th><td class="field-body"><p class="first last">List</p>
+</td>
+</tr>
+</tbody>
+</table>
+</dd></dl>
+
+</dd></dl>
+
+<span class="target" id="module-logflow.treebuilding.Log"></span><dl class="class">
+<dt id="logflow.treebuilding.Log.Log">
+<em class="property">class </em><code class="descclassname">logflow.treebuilding.Log.</code><code class="descname">Log</code><span class="sig-paren">(</span><em>line: str</em>, <em>index_line=-1</em><span class="sig-paren">)</span><a class="reference internal" href="../../_modules/logflow/treebuilding/Log.html#Log"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#logflow.treebuilding.Log.Log" title="Permalink to this definition">¶</a></dt>
+<dd><p>Represents a line of log.</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><ul class="first last simple">
+<li><strong>line</strong> (<em>str</em>) – the line</li>
+<li><strong>index_line</strong> (<em>int</em><em>, </em><em>optional</em>) – index of the line in the file. Defaults to -1.</li>
+</ul>
+</td>
+</tr>
+</tbody>
+</table>
+<dl class="method">
+<dt id="logflow.treebuilding.Log.Log.preprocess_line">
+<code class="descname">preprocess_line</code><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="reference internal" href="../../_modules/logflow/treebuilding/Log.html#Log.preprocess_line"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#logflow.treebuilding.Log.Log.preprocess_line" title="Permalink to this definition">¶</a></dt>
+<dd><p>Split the message part of the line</p>
+</dd></dl>
+
+</dd></dl>
+
+<span class="target" id="module-logflow.treebuilding.Parser"></span><dl class="class">
+<dt id="logflow.treebuilding.Parser.Parser">
+<em class="property">class </em><code class="descclassname">logflow.treebuilding.Parser.</code><code class="descname">Parser</code><span class="sig-paren">(</span><em>dict_patterns</em>, <em>w2v</em>, <em>counter_patterns</em><span class="sig-paren">)</span><a class="reference internal" href="../../_modules/logflow/treebuilding/Parser.html#Parser"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#logflow.treebuilding.Parser.Parser" title="Permalink to this definition">¶</a></dt>
+<dd><p>Get the pattern and the embedding of a log.</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><ul class="first last simple">
+<li><strong>dict_patterns</strong> (<em>dict</em>) – dict of patterns</li>
+<li><strong>w2v</strong> (<em>dict</em>) – word2vec model</li>
+<li><strong>counter_patterns</strong> (<em>dict</em>) – dict of the cardinality of patterns.</li>
+</ul>
+</td>
+</tr>
+</tbody>
+</table>
+<dl class="method">
+<dt id="logflow.treebuilding.Parser.Parser.get_pattern">
+<code class="descname">get_pattern</code><span class="sig-paren">(</span><em>log: logflow.treebuilding.Log.Log</em><span class="sig-paren">)</span><a class="reference internal" href="../../_modules/logflow/treebuilding/Parser.html#Parser.get_pattern"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#logflow.treebuilding.Parser.Parser.get_pattern" title="Permalink to this definition">¶</a></dt>
+<dd><p>Get the pattern associated with a log. Uses the method of Journal from the logsparser.</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><strong>log</strong> (<a class="reference internal" href="#module-logflow.treebuilding.Log" title="logflow.treebuilding.Log"><em>Log</em></a>) – log to be associated with a pattern .</td>
+</tr>
+</tbody>
+</table>
+</dd></dl>
+
+<dl class="method">
+<dt id="logflow.treebuilding.Parser.Parser.get_w2v">
+<code class="descname">get_w2v</code><span class="sig-paren">(</span><em>log: logflow.treebuilding.Log.Log</em><span class="sig-paren">)</span><a class="reference internal" href="../../_modules/logflow/treebuilding/Parser.html#Parser.get_w2v"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#logflow.treebuilding.Parser.Parser.get_w2v" title="Permalink to this definition">¶</a></dt>
+<dd><p>Get the embedding associated with a log and its pattern.</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><strong>log</strong> (<a class="reference internal" href="#module-logflow.treebuilding.Log" title="logflow.treebuilding.Log"><em>Log</em></a>) – log to be associated with the embedding.</td>
+</tr>
+</tbody>
+</table>
+</dd></dl>
+
+</dd></dl>
+
+<span class="target" id="module-logflow.treebuilding.Tree"></span><dl class="class">
+<dt id="logflow.treebuilding.Tree.Tree">
+<em class="property">class </em><code class="descclassname">logflow.treebuilding.Tree.</code><code class="descname">Tree</code><a class="reference internal" href="../../_modules/logflow/treebuilding/Tree.html#Tree"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#logflow.treebuilding.Tree.Tree" title="Permalink to this definition">¶</a></dt>
+<dd><p>Manages the tree building according to the relation found by the Inference with the weigths of the attention value.</p>
+<dl class="method">
+<dt id="logflow.treebuilding.Tree.Tree.add_node">
+<code class="descname">add_node</code><span class="sig-paren">(</span><em>log: logflow.treebuilding.Log.Log</em>, <em>id=0</em>, <em>parent=-1</em>, <em>processed=False</em>, <em>weight=0</em><span class="sig-paren">)</span><a class="reference internal" href="../../_modules/logflow/treebuilding/Tree.html#Tree.add_node"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#logflow.treebuilding.Tree.Tree.add_node" title="Permalink to this definition">¶</a></dt>
+<dd><p>Add a node to the tree</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><ul class="first last simple">
+<li><strong>log</strong> (<a class="reference internal" href="#module-logflow.treebuilding.Log" title="logflow.treebuilding.Log"><em>Log</em></a>) – log to add.</li>
+<li><strong>id</strong> (<em>int</em><em>, </em><em>optional</em>) – id of the node. Defaults to 0.</li>
+<li><strong>parent</strong> (<em>int</em><em>, </em><em>optional</em>) – id of the node’s parent. Defaults to -1.</li>
+<li><strong>processed</strong> (<em>bool</em><em>, </em><em>optional</em>) – node has been merged or not. Defaults to False.</li>
+<li><strong>weight</strong> (<em>int</em><em>, </em><em>optional</em>) – weigth associated to the node according to the attention layer. Defaults to 0.</li>
+</ul>
+</td>
+</tr>
+</tbody>
+</table>
+</dd></dl>
+
+<dl class="method">
+<dt id="logflow.treebuilding.Tree.Tree.get_node">
+<code class="descname">get_node</code><span class="sig-paren">(</span><em>index: int</em><span class="sig-paren">)</span> &#x2192; logflow.treebuilding.Node.Node<a class="reference internal" href="../../_modules/logflow/treebuilding/Tree.html#Tree.get_node"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#logflow.treebuilding.Tree.Tree.get_node" title="Permalink to this definition">¶</a></dt>
+<dd><p>Get a node at the index</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><strong>index</strong> (<em>int</em>) – index of the node</td>
+</tr>
+<tr class="field-even field"><th class="field-name">Returns:</th><td class="field-body">node at the index “index”</td>
+</tr>
+<tr class="field-odd field"><th class="field-name">Return type:</th><td class="field-body"><a class="reference internal" href="#module-logflow.treebuilding.Node" title="logflow.treebuilding.Node">Node</a></td>
+</tr>
+</tbody>
+</table>
+</dd></dl>
+
+<dl class="method">
+<dt id="logflow.treebuilding.Tree.Tree.get_number_nodes_merged">
+<code class="descname">get_number_nodes_merged</code><span class="sig-paren">(</span><span class="sig-paren">)</span> &#x2192; int<a class="reference internal" href="../../_modules/logflow/treebuilding/Tree.html#Tree.get_number_nodes_merged"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#logflow.treebuilding.Tree.Tree.get_number_nodes_merged" title="Permalink to this definition">¶</a></dt>
+<dd><p>Return the number of merged nodes</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Returns:</th><td class="field-body">number of merged nodes.</td>
+</tr>
+<tr class="field-even field"><th class="field-name">Return type:</th><td class="field-body">int</td>
+</tr>
+</tbody>
+</table>
+</dd></dl>
+
+<dl class="method">
+<dt id="logflow.treebuilding.Tree.Tree.merge_link">
+<code class="descname">merge_link</code><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="reference internal" href="../../_modules/logflow/treebuilding/Tree.html#Tree.merge_link"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#logflow.treebuilding.Tree.Tree.merge_link" title="Permalink to this definition">¶</a></dt>
+<dd><p>Merge the links</p>
+</dd></dl>
+
+<dl class="method">
+<dt id="logflow.treebuilding.Tree.Tree.merge_tree">
+<code class="descname">merge_tree</code><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="reference internal" href="../../_modules/logflow/treebuilding/Tree.html#Tree.merge_tree"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#logflow.treebuilding.Tree.Tree.merge_tree" title="Permalink to this definition">¶</a></dt>
+<dd><p>Merge the tree to keep only the relevant relations.</p>
+</dd></dl>
+
+<dl class="method">
+<dt id="logflow.treebuilding.Tree.Tree.update_node">
+<code class="descname">update_node</code><span class="sig-paren">(</span><em>index: int</em><span class="sig-paren">)</span><a class="reference internal" href="../../_modules/logflow/treebuilding/Tree.html#Tree.update_node"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#logflow.treebuilding.Tree.Tree.update_node" title="Permalink to this definition">¶</a></dt>
+<dd><p>Update the processed statut of a node at the index “index”</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><strong>index</strong> (<em>int</em>) – index of the node</td>
+</tr>
+</tbody>
+</table>
+</dd></dl>
+
+</dd></dl>
+
+<span class="target" id="module-logflow.treebuilding.Node"></span><dl class="class">
+<dt id="logflow.treebuilding.Node.Node">
+<em class="property">class </em><code class="descclassname">logflow.treebuilding.Node.</code><code class="descname">Node</code><span class="sig-paren">(</span><em>log: logflow.treebuilding.Log.Log</em>, <em>id: int</em>, <em>parent: int</em>, <em>processed: bool</em>, <em>weight: float</em><span class="sig-paren">)</span><a class="reference internal" href="../../_modules/logflow/treebuilding/Node.html#Node"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#logflow.treebuilding.Node.Node" title="Permalink to this definition">¶</a></dt>
+<dd><p>Node of the tree</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><ul class="first last simple">
+<li><strong>log</strong> (<a class="reference internal" href="#module-logflow.treebuilding.Log" title="logflow.treebuilding.Log"><em>Log</em></a>) – Log associated to the node</li>
+<li><strong>id</strong> (<em>int</em>) – id of the node</li>
+<li><strong>parent</strong> (<em>int</em>) – id of the node’s parents</li>
+<li><strong>processed</strong> (<em>bool</em>) – node has been merged or not</li>
+<li><strong>weight</strong> (<em>float</em>) – weigth associated to the node according to the attention layer.</li>
+</ul>
+</td>
+</tr>
+</tbody>
+</table>
+</dd></dl>
+
+<span class="target" id="module-logflow.treebuilding.Workflow"></span><dl class="class">
+<dt id="logflow.treebuilding.Workflow.Workflow">
+<em class="property">class </em><code class="descclassname">logflow.treebuilding.Workflow.</code><code class="descname">Workflow</code><span class="sig-paren">(</span><em>dataset: logflow.treebuilding.Dataset.Dataset</em><span class="sig-paren">)</span><a class="reference internal" href="../../_modules/logflow/treebuilding/Workflow.html#Workflow"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#logflow.treebuilding.Workflow.Workflow" title="Permalink to this definition">¶</a></dt>
+<dd><p>Computes the tree of correlations.</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><strong>dataset</strong> (<a class="reference internal" href="../logsparser/doc.html#module-logflow.logsparser.Dataset" title="logflow.logsparser.Dataset"><em>Dataset</em></a>) – dataset containing the data for the inference and the tree building.</td>
+</tr>
+</tbody>
+</table>
+<dl class="method">
+<dt id="logflow.treebuilding.Workflow.Workflow.detect_workflow">
+<code class="descname">detect_workflow</code><span class="sig-paren">(</span><em>index_line: int</em><span class="sig-paren">)</span> &#x2192; str<a class="reference internal" href="../../_modules/logflow/treebuilding/Workflow.html#Workflow.detect_workflow"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#logflow.treebuilding.Workflow.Workflow.detect_workflow" title="Permalink to this definition">¶</a></dt>
+<dd><p>Detect the workflow (i.e. the correlations tree)</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><strong>index_line</strong> (<em>int</em>) – index of the line</td>
+</tr>
+<tr class="field-even field"><th class="field-name">Returns:</th><td class="field-body">representation of the three to be used with graphviz.</td>
+</tr>
+<tr class="field-odd field"><th class="field-name">Return type:</th><td class="field-body">str</td>
+</tr>
+</tbody>
+</table>
+</dd></dl>
+
+<dl class="method">
+<dt id="logflow.treebuilding.Workflow.Workflow.get_tree">
+<code class="descname">get_tree</code><span class="sig-paren">(</span><em>index_line: int</em><span class="sig-paren">)</span><a class="reference internal" href="../../_modules/logflow/treebuilding/Workflow.html#Workflow.get_tree"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#logflow.treebuilding.Workflow.Workflow.get_tree" title="Permalink to this definition">¶</a></dt>
+<dd><p>Get the tree associated to the line at the index “index_line”</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><strong>index_line</strong> (<em>int</em>) – index of the line</td>
+</tr>
+<tr class="field-even field"><th class="field-name">Returns:</th><td class="field-body">Index of the line is after the maximum loaded index.</td>
+</tr>
+<tr class="field-odd field"><th class="field-name">Return type:</th><td class="field-body">Exception</td>
+</tr>
+</tbody>
+</table>
+</dd></dl>
+
+<dl class="method">
+<dt id="logflow.treebuilding.Workflow.Workflow.write_workflow_merged">
+<code class="descname">write_workflow_merged</code><span class="sig-paren">(</span><em>local_tree: logflow.treebuilding.Tree.Tree</em><span class="sig-paren">)</span> &#x2192; str<a class="reference internal" href="../../_modules/logflow/treebuilding/Workflow.html#Workflow.write_workflow_merged"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#logflow.treebuilding.Workflow.Workflow.write_workflow_merged" title="Permalink to this definition">¶</a></dt>
+<dd><p>Write the tree following the graphviz syntax</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><strong>local_tree</strong> (<a class="reference internal" href="#module-logflow.treebuilding.Tree" title="logflow.treebuilding.Tree"><em>Tree</em></a>) – tree to be written.</td>
+</tr>
+<tr class="field-even field"><th class="field-name">Returns:</th><td class="field-body">representation of the tree.</td>
+</tr>
+<tr class="field-odd field"><th class="field-name">Return type:</th><td class="field-body">str</td>
+</tr>
+</tbody>
+</table>
+</dd></dl>
+
+</dd></dl>
+
+</div>
+
+
+          </div>
+        </div>
+      </div>
+      <div class="sphinxsidebar" role="navigation" aria-label="main navigation">
+        <div class="sphinxsidebarwrapper"><div class="relations">
+<h3>Related Topics</h3>
+<ul>
+  <li><a href="../../index.html">Documentation overview</a><ul>
+      <li>Previous: <a href="../relationsdiscover/doc.html" title="previous chapter">Relationsdiscover documentation</a></li>
+  </ul></li>
+</ul>
+</div>
+<div id="searchbox" style="display: none" role="search">
+  <h3>Quick search</h3>
+    <form class="search" action="../../search.html" method="get">
+      <div><input type="text" name="q" /></div>
+      <div><input type="submit" value="Go" /></div>
+      <input type="hidden" name="check_keywords" value="yes" />
+      <input type="hidden" name="area" value="default" />
+    </form>
+</div>
+<script type="text/javascript">$('#searchbox').show(0);</script>
+        </div>
+      </div>
+      <div class="clearer"></div>
+    </div>
+    <div class="footer">
+      &copy;2020, Marc Platini.
+      
+      |
+      Powered by <a href="http://sphinx-doc.org/">Sphinx 1.6.7</a>
+      &amp; <a href="https://github.com/bitprophet/alabaster">Alabaster 0.7.8</a>
+      
+      |
+      <a href="../../_sources/docs/treebuilding/doc.rst.txt"
+          rel="nofollow">Page source</a>
+    </div>
+
+    
+
+    
+  </body>
+</html>

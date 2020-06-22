@@ -1,0 +1,366 @@
+
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN"
+  "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+
+<html xmlns="http://www.w3.org/1999/xhtml">
+  <head>
+    <meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
+    <title>logflow.logsparser.Journal &#8212; LogFlow 0.1 documentation</title>
+    <link rel="stylesheet" href="../../../_static/alabaster.css" type="text/css" />
+    <link rel="stylesheet" href="../../../_static/pygments.css" type="text/css" />
+    <script type="text/javascript">
+      var DOCUMENTATION_OPTIONS = {
+        URL_ROOT:    '../../../',
+        VERSION:     '0.1',
+        COLLAPSE_INDEX: false,
+        FILE_SUFFIX: '.html',
+        HAS_SOURCE:  true,
+        SOURCELINK_SUFFIX: '.txt'
+      };
+    </script>
+    <script type="text/javascript" src="../../../_static/jquery.js"></script>
+    <script type="text/javascript" src="../../../_static/underscore.js"></script>
+    <script type="text/javascript" src="../../../_static/doctools.js"></script>
+    <link rel="index" title="Index" href="../../../genindex.html" />
+    <link rel="search" title="Search" href="../../../search.html" />
+   
+  <link rel="stylesheet" href="../../../_static/custom.css" type="text/css" />
+  
+  <meta name="viewport" content="width=device-width, initial-scale=0.9, maximum-scale=0.9" />
+
+  </head>
+  <body>
+  
+
+    <div class="document">
+      <div class="documentwrapper">
+        <div class="bodywrapper">
+          <div class="body" role="main">
+            
+  <h1>Source code for logflow.logsparser.Journal</h1><div class="highlight"><pre>
+<span></span><span class="kn">from</span> <span class="nn">loguru</span> <span class="k">import</span> <span class="n">logger</span>
+<span class="kn">from</span> <span class="nn">collections</span> <span class="k">import</span> <span class="n">Counter</span>
+<span class="kn">from</span> <span class="nn">logflow.logsparser.Pattern</span> <span class="k">import</span> <span class="n">Pattern</span>
+<span class="kn">import</span> <span class="nn">time</span>
+<span class="kn">from</span> <span class="nn">typing</span> <span class="k">import</span> <span class="n">Dict</span><span class="p">,</span> <span class="n">List</span><span class="p">,</span> <span class="n">Tuple</span>
+
+<span class="c1"># TODO: Test performance of static vs method</span>
+
+<div class="viewcode-block" id="Journal"><a class="viewcode-back" href="../../../docs/logsparser/doc.html#logflow.logsparser.Journal.Journal">[docs]</a><span class="k">class</span> <span class="nc">Journal</span><span class="p">:</span>
+    <span class="sd">&quot;&quot;&quot;A journal is a list of logs files. It reads, parses and associates the logs and the pattern.</span>
+
+<span class="sd">    Args:</span>
+<span class="sd">        parser_message (function): Function to split the message part of the line.</span>
+<span class="sd">        path (str): path to the data</span>
+<span class="sd">        associated_pattern (bool, optional): Associate or discover the patterns. Note that if associated_pattern is True, dict_patterns must be provided. Defaults to False.</span>
+<span class="sd">        dict_patterns (dict, optional): Dict of the patterns for the association. Defaults to {}.</span>
+<span class="sd">        large_file (bool, optional): Optimization for the reading of one large file. Not implemented yet. Defaults to False.</span>
+<span class="sd">        pointer (int, optional): Optimization for the reading of one large file. Not implemented yet. Defaults to -1.</span>
+<span class="sd">        encoding (str, optional): Encoding of the files read.  Defaults to &quot;latin-1&quot;.</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+
+    <span class="k">def</span> <span class="nf">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">parser_message</span><span class="p">,</span> <span class="n">path</span> <span class="p">:</span> <span class="nb">str</span> <span class="p">,</span> <span class="n">associated_pattern</span><span class="o">=</span><span class="kc">False</span><span class="p">,</span> <span class="n">dict_patterns</span> <span class="o">=</span> <span class="p">{},</span> <span class="n">large_file</span><span class="o">=</span><span class="kc">False</span><span class="p">,</span> <span class="n">pointer</span><span class="o">=-</span><span class="mi">1</span><span class="p">,</span> <span class="n">encoding</span><span class="o">=</span><span class="s2">&quot;latin-1&quot;</span><span class="p">):</span>
+        <span class="k">assert</span> <span class="n">path</span> <span class="o">!=</span> <span class="s2">&quot;&quot;</span>
+        <span class="k">assert</span> <span class="n">parser_message</span> <span class="o">!=</span> <span class="s2">&quot;&quot;</span>
+        <span class="k">if</span> <span class="n">associated_pattern</span><span class="p">:</span>
+            <span class="k">assert</span> <span class="n">dict_patterns</span> <span class="o">!=</span> <span class="p">{}</span>
+        <span class="c1"># self.list_logs = []</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">path</span> <span class="o">=</span> <span class="n">path</span>
+        <span class="k">if</span> <span class="n">large_file</span><span class="p">:</span>
+            <span class="k">assert</span> <span class="n">pointer</span> <span class="o">!=</span> <span class="o">-</span><span class="mi">1</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">pointer</span> <span class="o">=</span> <span class="n">pointer</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">parser_message</span> <span class="o">=</span> <span class="n">parser_message</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">encoding</span> <span class="o">=</span> <span class="n">encoding</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">dict_words_descriptors</span> <span class="p">:</span> <span class="n">Dict</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="nb">str</span><span class="p">]</span><span class="o">=</span> <span class="p">{}</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">dict_message</span> <span class="p">:</span> <span class="n">Dict</span><span class="p">[</span><span class="n">Tuple</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="o">...</span><span class="p">],</span> <span class="n">Tuple</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="o">...</span><span class="p">]]</span> <span class="o">=</span> <span class="p">{}</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">associated_pattern</span> <span class="o">=</span>  <span class="n">associated_pattern</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">dict_patterns</span> <span class="o">=</span> <span class="n">dict_patterns</span>
+
+<div class="viewcode-block" id="Journal.run"><a class="viewcode-back" href="../../../docs/logsparser/doc.html#logflow.logsparser.Journal.Journal.run">[docs]</a>    <span class="k">def</span> <span class="nf">run</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;Start the process</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="k">if</span> <span class="ow">not</span> <span class="bp">self</span><span class="o">.</span><span class="n">associated_pattern</span><span class="p">:</span>
+            <span class="c1"># We discover the patterns</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">counter_logs</span> <span class="o">=</span> <span class="p">{}</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">dict_message</span> <span class="o">=</span> <span class="p">{}</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">read_file</span><span class="p">()</span>
+            <span class="k">del</span> <span class="bp">self</span><span class="o">.</span><span class="n">dict_words_descriptors</span>
+            <span class="k">del</span> <span class="bp">self</span><span class="o">.</span><span class="n">dict_message</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">dict_words_descriptors</span> <span class="o">=</span> <span class="p">{}</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">dict_message</span> <span class="o">=</span> <span class="p">{}</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="c1"># We associate lines and patterns</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">default_pattern</span> <span class="o">=</span> <span class="n">Pattern</span><span class="p">(</span><span class="mi">0</span><span class="p">,</span> <span class="p">[],</span> <span class="p">[])</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">dict_message_associated</span> <span class="p">:</span> <span class="n">Dict</span><span class="p">[</span><span class="n">Tuple</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="o">...</span><span class="p">],</span> <span class="nb">int</span><span class="p">]</span><span class="o">=</span> <span class="p">{}</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">list_patterns</span> <span class="o">=</span> <span class="p">[]</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">read_file</span><span class="p">()</span></div>
+
+<div class="viewcode-block" id="Journal.count_log"><a class="viewcode-back" href="../../../docs/logsparser/doc.html#logflow.logsparser.Journal.Journal.count_log">[docs]</a>    <span class="k">def</span> <span class="nf">count_log</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">line</span> <span class="p">:</span> <span class="nb">str</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;Count the number of same entries according to their descriptors. for space and computation optimization.</span>
+
+<span class="sd">        Example with 3 entries :</span>
+<span class="sd">        &quot;Connexion of user Marc&quot;</span>
+<span class="sd">        &quot;Connexion of user Marc&quot;</span>
+<span class="sd">        &quot;Application failure node [1,0,0,2,4]&quot;</span>
+<span class="sd">        </span>
+<span class="sd">        Counter_logs will be : {&quot;Connexion of user Marc&quot;:2, &quot;Application failure node [1,0,0,2,4]&quot;, 1}.</span>
+
+<span class="sd">        To avoid useless computation, we use a dictionnary of line and line&#39;s descriptors. We do not compute the descriptors each time for each line.</span>
+
+<span class="sd">        Args:</span>
+<span class="sd">            line (str): line of log to add to the counter.</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="c1"># Parse the message to have the descriptors.</span>
+        <span class="n">message</span> <span class="p">:</span> <span class="n">List</span><span class="p">[</span><span class="nb">str</span><span class="p">]</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">parser_message</span><span class="p">(</span><span class="n">line</span><span class="o">=</span><span class="n">line</span><span class="p">)</span>
+        <span class="k">if</span> <span class="nb">len</span><span class="p">(</span><span class="n">message</span><span class="p">)</span> <span class="o">&gt;</span> <span class="mi">0</span><span class="p">:</span>
+            <span class="c1"># Get the frozen message because python can&#39;t used list as dictionnary key.</span>
+            <span class="n">frozen_message</span> <span class="p">:</span> <span class="n">Tuple</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="o">...</span><span class="p">]</span> <span class="o">=</span> <span class="nb">tuple</span><span class="p">(</span><span class="n">message</span><span class="p">)</span>
+            <span class="k">if</span> <span class="n">frozen_message</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">dict_message</span><span class="p">:</span>
+                 <span class="c1"># If the message is already in the dict, get the associated descriptors and add +1</span>
+                <span class="bp">self</span><span class="o">.</span><span class="n">counter_logs</span><span class="p">[</span><span class="bp">self</span><span class="o">.</span><span class="n">dict_message</span><span class="p">[</span><span class="n">frozen_message</span><span class="p">]]</span> <span class="o">+=</span> <span class="mi">1</span>
+            <span class="k">else</span><span class="p">:</span>
+                <span class="c1"># Else, compute the descriptors, add the line and descriptors into the dict, and add the line of descriptors to the dict.</span>
+                <span class="n">frozen_message_descriptors</span> <span class="o">=</span> <span class="nb">tuple</span><span class="p">([</span><span class="bp">self</span><span class="o">.</span><span class="n">filter_word</span><span class="p">(</span><span class="n">word</span><span class="p">)</span> <span class="k">for</span> <span class="n">word</span> <span class="ow">in</span> <span class="n">message</span><span class="p">])</span>
+                <span class="bp">self</span><span class="o">.</span><span class="n">dict_message</span><span class="o">.</span><span class="n">setdefault</span><span class="p">(</span><span class="n">frozen_message</span><span class="p">,</span> <span class="n">frozen_message_descriptors</span><span class="p">)</span>
+                <span class="bp">self</span><span class="o">.</span><span class="n">counter_logs</span><span class="o">.</span><span class="n">setdefault</span><span class="p">(</span><span class="n">frozen_message_descriptors</span><span class="p">,</span> <span class="mi">1</span><span class="p">)</span>
+                <span class="bp">self</span><span class="o">.</span><span class="n">counter_logs</span><span class="p">[</span><span class="bp">self</span><span class="o">.</span><span class="n">dict_message</span><span class="p">[</span><span class="n">frozen_message</span><span class="p">]]</span> <span class="o">+=</span> <span class="mi">1</span></div>
+
+<div class="viewcode-block" id="Journal.associate_pattern"><a class="viewcode-back" href="../../../docs/logsparser/doc.html#logflow.logsparser.Journal.Journal.associate_pattern">[docs]</a>    <span class="k">def</span> <span class="nf">associate_pattern</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">line</span> <span class="p">:</span> <span class="nb">str</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;Associate a line with a pattern. Add this pattern to the list of patterns.</span>
+
+<span class="sd">        Args:</span>
+<span class="sd">            line (str): line to be associated.</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="c1"># Parse the message</span>
+        <span class="n">message</span> <span class="o">=</span> <span class="p">[</span><span class="bp">self</span><span class="o">.</span><span class="n">filter_word</span><span class="p">(</span><span class="n">word</span><span class="p">)</span> <span class="k">for</span> <span class="n">word</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">parser_message</span><span class="p">(</span><span class="n">line</span><span class="o">=</span><span class="n">line</span><span class="p">)]</span>
+        <span class="k">if</span> <span class="nb">len</span><span class="p">(</span><span class="n">message</span><span class="p">)</span> <span class="o">&gt;</span> <span class="mi">0</span><span class="p">:</span>
+            <span class="n">frozen_message</span> <span class="o">=</span> <span class="nb">tuple</span><span class="p">(</span><span class="n">message</span><span class="p">)</span>
+            <span class="k">if</span> <span class="n">frozen_message</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">dict_message_associated</span><span class="p">:</span>
+                <span class="c1"># If we have already seen the message, we know the pattern.</span>
+                <span class="bp">self</span><span class="o">.</span><span class="n">list_patterns</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">dict_message_associated</span><span class="p">[</span><span class="n">frozen_message</span><span class="p">])</span>
+            <span class="k">else</span><span class="p">:</span>
+                <span class="c1"># Else, compute it.</span>
+                <span class="n">best_pattern</span> <span class="o">=</span> <span class="n">Journal</span><span class="o">.</span><span class="n">find_pattern</span><span class="p">(</span><span class="n">message</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">dict_patterns</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">default_pattern</span><span class="p">)</span>
+                <span class="bp">self</span><span class="o">.</span><span class="n">dict_message_associated</span><span class="p">[</span><span class="n">frozen_message</span><span class="p">]</span> <span class="o">=</span> <span class="n">best_pattern</span><span class="o">.</span><span class="n">id</span>
+                <span class="bp">self</span><span class="o">.</span><span class="n">list_patterns</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">best_pattern</span><span class="o">.</span><span class="n">id</span><span class="p">)</span></div>
+    
+<div class="viewcode-block" id="Journal.read_file"><a class="viewcode-back" href="../../../docs/logsparser/doc.html#logflow.logsparser.Journal.Journal.read_file">[docs]</a>    <span class="k">def</span> <span class="nf">read_file</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;Read the logs files.</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="k">if</span> <span class="nb">isinstance</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">path</span><span class="p">,</span> <span class="nb">str</span><span class="p">):</span>
+            <span class="c1"># For only one file</span>
+            <span class="k">try</span><span class="p">:</span>
+                <span class="k">with</span> <span class="nb">open</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">path</span><span class="p">,</span> <span class="s2">&quot;r&quot;</span><span class="p">,</span> <span class="n">encoding</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">encoding</span><span class="p">)</span> <span class="k">as</span> <span class="n">file_open</span><span class="p">:</span> 
+                    <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">associated_pattern</span><span class="p">:</span>
+                        <span class="k">for</span> <span class="n">line</span> <span class="ow">in</span> <span class="n">file_open</span><span class="o">.</span><span class="n">readlines</span><span class="p">():</span>
+                            <span class="bp">self</span><span class="o">.</span><span class="n">associate_pattern</span><span class="p">(</span><span class="n">line</span><span class="p">)</span>
+                    <span class="k">else</span><span class="p">:</span>
+                        <span class="k">for</span> <span class="n">line</span> <span class="ow">in</span> <span class="n">file_open</span><span class="o">.</span><span class="n">readlines</span><span class="p">():</span>
+                            <span class="bp">self</span><span class="o">.</span><span class="n">count_log</span><span class="p">(</span><span class="n">line</span><span class="p">)</span>
+            <span class="k">except</span><span class="p">:</span>
+               <span class="n">logger</span><span class="o">.</span><span class="n">error</span><span class="p">(</span><span class="s2">&quot;Error while reading the file: &quot;</span> <span class="o">+</span><span class="nb">str</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">path</span><span class="p">))</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="c1"># For a list of files.</span>
+            <span class="k">for</span> <span class="n">file_path</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">path</span><span class="p">:</span>
+                <span class="k">try</span><span class="p">:</span>
+                    <span class="k">with</span> <span class="nb">open</span><span class="p">(</span><span class="n">file_path</span><span class="p">,</span> <span class="s2">&quot;r&quot;</span><span class="p">,</span> <span class="n">encoding</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">encoding</span><span class="p">)</span> <span class="k">as</span> <span class="n">file_open</span><span class="p">:</span> 
+                        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">associated_pattern</span><span class="p">:</span>
+                            <span class="k">for</span> <span class="n">line</span> <span class="ow">in</span> <span class="n">file_open</span><span class="o">.</span><span class="n">readlines</span><span class="p">():</span>
+                                <span class="bp">self</span><span class="o">.</span><span class="n">associate_pattern</span><span class="p">(</span><span class="n">line</span><span class="p">)</span>
+                        <span class="k">else</span><span class="p">:</span>
+                            <span class="k">for</span> <span class="n">line</span> <span class="ow">in</span> <span class="n">file_open</span><span class="o">.</span><span class="n">readlines</span><span class="p">():</span>
+                                <span class="bp">self</span><span class="o">.</span><span class="n">count_log</span><span class="p">(</span><span class="n">line</span><span class="p">)</span>
+                <span class="k">except</span><span class="p">:</span>
+                   <span class="n">logger</span><span class="o">.</span><span class="n">error</span><span class="p">(</span><span class="s2">&quot;Error while reading the file: &quot;</span> <span class="o">+</span><span class="nb">str</span><span class="p">(</span><span class="n">file_path</span><span class="p">))</span></div>
+
+<div class="viewcode-block" id="Journal.filter_word"><a class="viewcode-back" href="../../../docs/logsparser/doc.html#logflow.logsparser.Journal.Journal.filter_word">[docs]</a>    <span class="k">def</span> <span class="nf">filter_word</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">word</span> <span class="p">:</span> <span class="nb">str</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">str</span><span class="p">:</span>
+        <span class="sd">&quot;&quot;&quot;Get the descriptors of the word</span>
+
+<span class="sd">        Args:</span>
+<span class="sd">            word (str): word to describe</span>
+
+<span class="sd">        Returns:</span>
+<span class="sd">            str: descriptors of the word. They use a string representation of a list.</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">is_number</span><span class="p">(</span><span class="n">word</span><span class="p">):</span>
+            <span class="k">return</span> <span class="s2">&quot;NB&quot;</span>
+        <span class="k">elif</span> <span class="n">word</span><span class="o">.</span><span class="n">isalpha</span><span class="p">()</span> <span class="ow">or</span> <span class="nb">len</span><span class="p">(</span><span class="n">word</span><span class="p">)</span> <span class="o">==</span> <span class="mi">1</span><span class="p">:</span>
+            <span class="k">return</span> <span class="n">word</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="k">if</span> <span class="n">word</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">dict_words_descriptors</span><span class="p">:</span>
+                <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">dict_words_descriptors</span><span class="p">[</span><span class="n">word</span><span class="p">]</span>
+            <span class="n">vector</span> <span class="o">=</span> <span class="p">[</span><span class="s2">&quot;0&quot;</span><span class="p">]</span><span class="o">*</span><span class="mi">5</span>
+            <span class="n">number</span> <span class="o">=</span> <span class="kc">False</span>
+            <span class="n">lower</span> <span class="o">=</span> <span class="kc">False</span>
+            <span class="n">upper</span> <span class="o">=</span> <span class="kc">False</span>
+            <span class="n">alnum</span> <span class="o">=</span> <span class="kc">False</span>
+            <span class="k">for</span> <span class="n">letter</span> <span class="ow">in</span> <span class="n">word</span><span class="p">:</span>
+                <span class="k">if</span> <span class="n">letter</span><span class="o">.</span><span class="n">isdigit</span><span class="p">():</span>
+                    <span class="n">vector</span><span class="p">[</span><span class="mi">3</span><span class="p">]</span> <span class="o">=</span> <span class="s2">&quot;1&quot;</span>
+                    <span class="n">number</span> <span class="o">=</span> <span class="kc">True</span>
+                <span class="k">elif</span> <span class="n">letter</span><span class="o">.</span><span class="n">islower</span><span class="p">():</span>
+                    <span class="n">vector</span><span class="p">[</span><span class="mi">1</span><span class="p">]</span> <span class="o">=</span> <span class="s2">&quot;1&quot;</span>
+                    <span class="n">lower</span> <span class="o">=</span> <span class="kc">True</span>
+                <span class="k">elif</span> <span class="n">letter</span><span class="o">.</span><span class="n">isupper</span><span class="p">():</span>
+                    <span class="n">vector</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span> <span class="o">=</span> <span class="s2">&quot;1&quot;</span>
+                    <span class="n">upper</span> <span class="o">=</span> <span class="kc">True</span>
+                <span class="k">elif</span> <span class="ow">not</span> <span class="n">letter</span><span class="o">.</span><span class="n">isalnum</span><span class="p">():</span>
+                    <span class="n">vector</span><span class="p">[</span><span class="mi">2</span><span class="p">]</span> <span class="o">=</span> <span class="s2">&quot;1&quot;</span>
+                    <span class="n">alnum</span> <span class="o">=</span> <span class="kc">True</span>
+                <span class="k">if</span> <span class="n">number</span> <span class="ow">and</span> <span class="n">lower</span> <span class="ow">and</span> <span class="n">upper</span> <span class="ow">and</span> <span class="n">alnum</span><span class="p">:</span>
+                    <span class="k">break</span>
+            <span class="n">vector</span><span class="p">[</span><span class="mi">4</span><span class="p">]</span> <span class="o">=</span> <span class="nb">str</span><span class="p">(</span><span class="nb">len</span><span class="p">(</span><span class="n">word</span><span class="p">))</span>
+            <span class="n">str_vector</span> <span class="o">=</span> <span class="s1">&#39;&#39;</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="n">vector</span><span class="p">)</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">dict_words_descriptors</span><span class="o">.</span><span class="n">setdefault</span><span class="p">(</span><span class="n">word</span><span class="p">,</span> <span class="n">str_vector</span><span class="p">)</span>
+            <span class="k">return</span> <span class="n">str_vector</span></div>
+
+<div class="viewcode-block" id="Journal.is_number"><a class="viewcode-back" href="../../../docs/logsparser/doc.html#logflow.logsparser.Journal.Journal.is_number">[docs]</a>    <span class="k">def</span> <span class="nf">is_number</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">s</span> <span class="p">:</span> <span class="nb">str</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">bool</span><span class="p">:</span>
+        <span class="sd">&quot;&quot;&quot;Detect if a string is a float.</span>
+
+<span class="sd">        Args:</span>
+<span class="sd">            s (str): string to parse</span>
+
+<span class="sd">        Returns:</span>
+<span class="sd">            bool: True if the string is a float, False else.</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="k">try</span><span class="p">:</span>
+            <span class="nb">float</span><span class="p">(</span><span class="n">s</span><span class="p">)</span>
+            <span class="k">return</span> <span class="kc">True</span>
+        <span class="k">except</span> <span class="ne">ValueError</span><span class="p">:</span>
+            <span class="k">return</span> <span class="kc">False</span></div>
+
+<div class="viewcode-block" id="Journal.find_pattern"><a class="viewcode-back" href="../../../docs/logsparser/doc.html#logflow.logsparser.Journal.Journal.find_pattern">[docs]</a>    <span class="nd">@staticmethod</span>
+    <span class="k">def</span> <span class="nf">find_pattern</span><span class="p">(</span><span class="n">message</span> <span class="p">:</span> <span class="n">List</span><span class="p">[</span><span class="nb">str</span><span class="p">],</span> <span class="n">dict_patterns</span> <span class="p">:</span> <span class="nb">dict</span><span class="p">,</span> <span class="n">default_pattern</span> <span class="p">:</span> <span class="n">Pattern</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">Pattern</span><span class="p">:</span>
+        <span class="sd">&quot;&quot;&quot;Find the pattern associated to a log.</span>
+<span class="sd">        </span>
+<span class="sd">        The best pattern is the pattern with the maximum common words with the line.</span>
+<span class="sd">        </span>
+<span class="sd">        Args:</span>
+<span class="sd">            message (List[str]): list of the words of the message part of the log.</span>
+<span class="sd">            dict_patterns (dict): the dict of patterns.</span>
+<span class="sd">            default_pattern (Pattern): the default pattern.</span>
+
+<span class="sd">        Returns:</span>
+<span class="sd">            Pattern: the pattern associated to the line.</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="c1"># TODO : check the computation time to create the default pattern each time.</span>
+        <span class="c1"># Create a default pattern to compare it to the other ones to find the best pattern.</span>
+        <span class="n">default_pattern</span> <span class="o">=</span> <span class="n">Pattern</span><span class="p">(</span><span class="mi">0</span><span class="p">,</span> <span class="p">[],</span> <span class="p">[])</span>
+        <span class="n">best_pattern</span> <span class="o">=</span> <span class="n">default_pattern</span>
+        <span class="c1"># Get the patterns with the same cardinality as the line. The cardinality of a pattern is the cardinality used for finding this pattern and not this number of words.</span>
+        <span class="n">dict_patterns_size</span> <span class="o">=</span> <span class="n">dict_patterns</span><span class="p">[</span><span class="nb">len</span><span class="p">(</span><span class="n">message</span><span class="p">)]</span>
+        <span class="c1"># Get the descriptors</span>
+        <span class="n">message</span> <span class="o">=</span> <span class="p">[</span><span class="n">Journal</span><span class="o">.</span><span class="n">static_filter_word</span><span class="p">(</span><span class="n">word</span><span class="p">)</span> <span class="k">for</span> <span class="n">word</span> <span class="ow">in</span> <span class="n">message</span><span class="p">]</span>
+        <span class="c1"># Begin by the bigger pattern to save time.</span>
+        <span class="k">for</span> <span class="n">size_pattern</span> <span class="ow">in</span> <span class="nb">sorted</span><span class="p">(</span><span class="n">dict_patterns_size</span><span class="o">.</span><span class="n">keys</span><span class="p">(),</span> <span class="n">reverse</span><span class="o">=</span><span class="kc">True</span><span class="p">):</span>
+            <span class="k">for</span> <span class="n">pattern</span> <span class="ow">in</span> <span class="n">dict_patterns_size</span><span class="p">[</span><span class="n">size_pattern</span><span class="p">]:</span>
+                <span class="n">nb_word_match</span> <span class="o">=</span> <span class="mi">0</span>
+                <span class="c1"># Compute the number of common words</span>
+                <span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="nb">len</span><span class="p">(</span><span class="n">pattern</span><span class="p">)):</span>
+                    <span class="k">if</span> <span class="n">pattern</span><span class="o">.</span><span class="n">pattern_word</span><span class="p">[</span><span class="n">i</span><span class="p">]</span> <span class="o">==</span> <span class="n">message</span><span class="p">[</span><span class="n">pattern</span><span class="o">.</span><span class="n">pattern_index</span><span class="p">[</span><span class="n">i</span><span class="p">]]:</span>
+                        <span class="n">nb_word_match</span> <span class="o">+=</span> <span class="mi">1</span>
+                <span class="c1"># If we have more common words, then we have a new best pattern</span>
+                <span class="k">if</span> <span class="n">nb_word_match</span> <span class="o">&gt;</span> <span class="nb">len</span><span class="p">(</span><span class="n">best_pattern</span><span class="p">):</span>
+                    <span class="n">best_pattern</span> <span class="o">=</span> <span class="n">pattern</span>
+            <span class="c1"># If new size if lower than the size of the actual best pattern, stop the detection. </span>
+            <span class="k">if</span> <span class="nb">len</span><span class="p">(</span><span class="n">best_pattern</span><span class="p">)</span> <span class="o">&gt;</span> <span class="n">size_pattern</span><span class="p">:</span>
+                <span class="k">break</span>
+        <span class="k">return</span> <span class="n">best_pattern</span></div>
+
+<div class="viewcode-block" id="Journal.static_is_number"><a class="viewcode-back" href="../../../docs/logsparser/doc.html#logflow.logsparser.Journal.Journal.static_is_number">[docs]</a>    <span class="nd">@staticmethod</span>
+    <span class="k">def</span> <span class="nf">static_is_number</span><span class="p">(</span><span class="n">s</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;Detect if a string is a float.</span>
+
+<span class="sd">        Args:</span>
+<span class="sd">            s (str): string to parse</span>
+
+<span class="sd">        Returns:</span>
+<span class="sd">            bool: True if the string is a float, False else.</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="k">try</span><span class="p">:</span>
+            <span class="nb">float</span><span class="p">(</span><span class="n">s</span><span class="p">)</span>
+            <span class="k">return</span> <span class="kc">True</span>
+        <span class="k">except</span> <span class="ne">ValueError</span><span class="p">:</span>
+            <span class="k">return</span> <span class="kc">False</span></div>
+
+<div class="viewcode-block" id="Journal.static_filter_word"><a class="viewcode-back" href="../../../docs/logsparser/doc.html#logflow.logsparser.Journal.Journal.static_filter_word">[docs]</a>    <span class="nd">@staticmethod</span>
+    <span class="k">def</span> <span class="nf">static_filter_word</span><span class="p">(</span><span class="n">word</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;Get the descriptors of the word</span>
+
+<span class="sd">        Args:</span>
+<span class="sd">            word (str): word to describe</span>
+
+<span class="sd">        Returns:</span>
+<span class="sd">            str: descriptors of the word. They use a string representation of a list.</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="k">if</span> <span class="n">Journal</span><span class="o">.</span><span class="n">static_is_number</span><span class="p">(</span><span class="n">word</span><span class="p">):</span>
+            <span class="k">return</span> <span class="s2">&quot;NB&quot;</span>
+        <span class="k">elif</span> <span class="n">word</span><span class="o">.</span><span class="n">isalpha</span><span class="p">()</span> <span class="ow">or</span> <span class="nb">len</span><span class="p">(</span><span class="n">word</span><span class="p">)</span> <span class="o">==</span> <span class="mi">1</span><span class="p">:</span>
+            <span class="k">return</span> <span class="n">word</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="n">vector</span> <span class="o">=</span> <span class="p">[</span><span class="s2">&quot;0&quot;</span><span class="p">]</span><span class="o">*</span><span class="mi">5</span>
+            <span class="n">number</span> <span class="o">=</span> <span class="kc">False</span>
+            <span class="n">lower</span> <span class="o">=</span> <span class="kc">False</span>
+            <span class="n">upper</span> <span class="o">=</span> <span class="kc">False</span>
+            <span class="n">alnum</span> <span class="o">=</span> <span class="kc">False</span>
+            <span class="k">for</span> <span class="n">letter</span> <span class="ow">in</span> <span class="n">word</span><span class="p">:</span>
+                <span class="k">if</span> <span class="n">letter</span><span class="o">.</span><span class="n">isdigit</span><span class="p">():</span>
+                    <span class="n">vector</span><span class="p">[</span><span class="mi">3</span><span class="p">]</span> <span class="o">=</span> <span class="s2">&quot;1&quot;</span>
+                    <span class="n">number</span> <span class="o">=</span> <span class="kc">True</span>
+                <span class="k">elif</span> <span class="n">letter</span><span class="o">.</span><span class="n">islower</span><span class="p">():</span>
+                    <span class="n">vector</span><span class="p">[</span><span class="mi">1</span><span class="p">]</span> <span class="o">=</span> <span class="s2">&quot;1&quot;</span>
+                    <span class="n">lower</span> <span class="o">=</span> <span class="kc">True</span>
+                <span class="k">elif</span> <span class="n">letter</span><span class="o">.</span><span class="n">isupper</span><span class="p">():</span>
+                    <span class="n">vector</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span> <span class="o">=</span> <span class="s2">&quot;1&quot;</span>
+                    <span class="n">upper</span> <span class="o">=</span> <span class="kc">True</span>
+                <span class="k">elif</span> <span class="ow">not</span> <span class="n">letter</span><span class="o">.</span><span class="n">isalnum</span><span class="p">():</span>
+                    <span class="n">vector</span><span class="p">[</span><span class="mi">2</span><span class="p">]</span> <span class="o">=</span> <span class="s2">&quot;1&quot;</span>
+                    <span class="n">alnum</span> <span class="o">=</span> <span class="kc">True</span>
+                <span class="k">if</span> <span class="n">number</span> <span class="ow">and</span> <span class="n">lower</span> <span class="ow">and</span> <span class="n">upper</span> <span class="ow">and</span> <span class="n">alnum</span><span class="p">:</span>
+                    <span class="k">break</span>
+            <span class="n">vector</span><span class="p">[</span><span class="mi">4</span><span class="p">]</span> <span class="o">=</span> <span class="nb">str</span><span class="p">(</span><span class="nb">len</span><span class="p">(</span><span class="n">word</span><span class="p">))</span>
+            <span class="n">str_vector</span> <span class="o">=</span> <span class="s1">&#39;&#39;</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="n">vector</span><span class="p">)</span>
+        <span class="k">return</span> <span class="n">str_vector</span></div></div>
+</pre></div>
+
+          </div>
+        </div>
+      </div>
+      <div class="sphinxsidebar" role="navigation" aria-label="main navigation">
+        <div class="sphinxsidebarwrapper"><div class="relations">
+<h3>Related Topics</h3>
+<ul>
+  <li><a href="../../../index.html">Documentation overview</a><ul>
+  <li><a href="../../index.html">Module code</a><ul>
+  </ul></li>
+  </ul></li>
+</ul>
+</div>
+<div id="searchbox" style="display: none" role="search">
+  <h3>Quick search</h3>
+    <form class="search" action="../../../search.html" method="get">
+      <div><input type="text" name="q" /></div>
+      <div><input type="submit" value="Go" /></div>
+      <input type="hidden" name="check_keywords" value="yes" />
+      <input type="hidden" name="area" value="default" />
+    </form>
+</div>
+<script type="text/javascript">$('#searchbox').show(0);</script>
+        </div>
+      </div>
+      <div class="clearer"></div>
+    </div>
+    <div class="footer">
+      &copy;2020, Marc Platini.
+      
+      |
+      Powered by <a href="http://sphinx-doc.org/">Sphinx 1.6.7</a>
+      &amp; <a href="https://github.com/bitprophet/alabaster">Alabaster 0.7.8</a>
+      
+    </div>
+
+    
+
+    
+  </body>
+</html>

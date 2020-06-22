@@ -1,0 +1,167 @@
+
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN"
+  "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+
+<html xmlns="http://www.w3.org/1999/xhtml">
+  <head>
+    <meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
+    <title>logflow.treebuilding.Inference &#8212; LogFlow 0.1 documentation</title>
+    <link rel="stylesheet" href="../../../_static/alabaster.css" type="text/css" />
+    <link rel="stylesheet" href="../../../_static/pygments.css" type="text/css" />
+    <script type="text/javascript">
+      var DOCUMENTATION_OPTIONS = {
+        URL_ROOT:    '../../../',
+        VERSION:     '0.1',
+        COLLAPSE_INDEX: false,
+        FILE_SUFFIX: '.html',
+        HAS_SOURCE:  true,
+        SOURCELINK_SUFFIX: '.txt'
+      };
+    </script>
+    <script type="text/javascript" src="../../../_static/jquery.js"></script>
+    <script type="text/javascript" src="../../../_static/underscore.js"></script>
+    <script type="text/javascript" src="../../../_static/doctools.js"></script>
+    <link rel="index" title="Index" href="../../../genindex.html" />
+    <link rel="search" title="Search" href="../../../search.html" />
+   
+  <link rel="stylesheet" href="../../../_static/custom.css" type="text/css" />
+  
+  <meta name="viewport" content="width=device-width, initial-scale=0.9, maximum-scale=0.9" />
+
+  </head>
+  <body>
+  
+
+    <div class="document">
+      <div class="documentwrapper">
+        <div class="bodywrapper">
+          <div class="body" role="main">
+            
+  <h1>Source code for logflow.treebuilding.Inference</h1><div class="highlight"><pre>
+<span></span><span class="kn">import</span> <span class="nn">torch</span>
+<span class="kn">import</span> <span class="nn">numpy</span> <span class="k">as</span> <span class="nn">np</span> <span class="c1"># type: ignore</span>
+<span class="kn">from</span> <span class="nn">logflow.relationsdiscover</span> <span class="k">import</span> <span class="n">Model</span>
+<span class="kn">from</span> <span class="nn">logflow.treebuilding.Log</span> <span class="k">import</span> <span class="n">Log</span>
+<span class="kn">from</span> <span class="nn">loguru</span> <span class="k">import</span> <span class="n">logger</span> 
+<span class="kn">from</span> <span class="nn">typing</span> <span class="k">import</span> <span class="n">List</span>
+
+<span class="k">if</span> <span class="n">torch</span><span class="o">.</span><span class="n">cuda</span><span class="o">.</span><span class="n">is_available</span><span class="p">():</span>
+    <span class="n">logger</span><span class="o">.</span><span class="n">info</span><span class="p">(</span><span class="s2">&quot;Using GPU&quot;</span><span class="p">)</span>
+    <span class="n">device</span> <span class="o">=</span> <span class="n">torch</span><span class="o">.</span><span class="n">device</span><span class="p">(</span><span class="s1">&#39;cuda&#39;</span><span class="p">)</span>
+<span class="k">else</span><span class="p">:</span>
+    <span class="n">device</span> <span class="o">=</span> <span class="n">torch</span><span class="o">.</span><span class="n">device</span><span class="p">(</span><span class="s1">&#39;cpu&#39;</span><span class="p">)</span>
+
+<div class="viewcode-block" id="Inference"><a class="viewcode-back" href="../../../docs/treebuilding/doc.html#logflow.treebuilding.Inference.Inference">[docs]</a><span class="k">class</span> <span class="nc">Inference</span><span class="p">:</span>
+    <span class="sd">&quot;&quot;&quot;Manages the deep learning model, and run the inference through it.</span>
+
+<span class="sd">    Args:</span>
+<span class="sd">        models (List): list of the learned model to load.</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+
+    <span class="k">def</span> <span class="nf">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">models</span> <span class="p">:</span> <span class="n">List</span><span class="p">):</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">models</span> <span class="o">=</span> <span class="n">models</span>
+        <span class="k">for</span> <span class="n">cardinality</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">models</span><span class="p">:</span>
+            <span class="n">save_model</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">models</span><span class="p">[</span><span class="n">cardinality</span><span class="p">]</span>
+            <span class="n">number_of_classes</span> <span class="o">=</span> <span class="n">save_model</span><span class="p">[</span><span class="s1">&#39;fc0.bias&#39;</span><span class="p">]</span><span class="o">.</span><span class="n">shape</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span> <span class="c1"># Should be saved into the loaded file</span>
+            <span class="n">model</span> <span class="o">=</span> <span class="n">Model</span><span class="o">.</span><span class="n">LSTMLayer</span><span class="p">(</span><span class="n">num_classes</span><span class="o">=</span><span class="n">number_of_classes</span><span class="p">,</span> <span class="n">batch_size</span><span class="o">=</span><span class="mi">1</span><span class="p">,</span> <span class="n">test</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span><span class="o">.</span><span class="n">to</span><span class="p">(</span><span class="n">device</span><span class="p">)</span>
+            <span class="n">model</span><span class="o">.</span><span class="n">load_state_dict</span><span class="p">(</span><span class="n">save_model</span><span class="p">)</span>
+            <span class="n">model</span><span class="o">.</span><span class="n">eval</span><span class="p">()</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">models</span><span class="p">[</span><span class="n">cardinality</span><span class="p">]</span> <span class="o">=</span> <span class="n">model</span>
+
+<div class="viewcode-block" id="Inference.probability"><a class="viewcode-back" href="../../../docs/treebuilding/doc.html#logflow.treebuilding.Inference.Inference.probability">[docs]</a>    <span class="k">def</span> <span class="nf">probability</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">x</span> <span class="p">:</span> <span class="n">List</span><span class="p">[</span><span class="nb">float</span><span class="p">])</span> <span class="o">-&gt;</span> <span class="n">List</span><span class="p">[</span><span class="nb">float</span><span class="p">]:</span>
+        <span class="sd">&quot;&quot;&quot;Compute probability (ie 0 =&lt; proba =&lt; 1) values for each sets of scores in x.</span>
+
+<span class="sd">        Args:</span>
+<span class="sd">            x (List[float]): list of values. Here, it is used at the output of the attention layer</span>
+
+<span class="sd">        Returns:</span>
+<span class="sd">            List[float]: list of probabilities</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="k">return</span> <span class="n">x</span> <span class="o">/</span> <span class="n">np</span><span class="o">.</span><span class="n">sum</span><span class="p">(</span><span class="n">x</span><span class="p">)</span></div>
+
+<div class="viewcode-block" id="Inference.test"><a class="viewcode-back" href="../../../docs/treebuilding/doc.html#logflow.treebuilding.Inference.Inference.test">[docs]</a>    <span class="k">def</span> <span class="nf">test</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">data</span> <span class="p">:</span> <span class="n">List</span><span class="p">[</span><span class="n">List</span><span class="p">[</span><span class="nb">float</span><span class="p">]],</span> <span class="n">log</span> <span class="p">:</span> <span class="n">Log</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">List</span><span class="p">:</span>
+        <span class="sd">&quot;&quot;&quot;Run the inference through the model and return only the value greater than the threshold.</span>
+
+<span class="sd">        Args:</span>
+<span class="sd">            data (List[List[float]]): vector to be used as an input</span>
+<span class="sd">            log (Log): log to predict</span>
+
+<span class="sd">        Returns:</span>
+<span class="sd">            List: list of the log with a weigth greater than the threshold. </span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="n">cardinality</span> <span class="o">=</span> <span class="n">log</span><span class="o">.</span><span class="n">cardinality</span>
+        <span class="n">tensor</span> <span class="o">=</span> <span class="n">torch</span><span class="o">.</span><span class="n">as_tensor</span><span class="p">([</span><span class="n">data</span><span class="p">])</span><span class="o">.</span><span class="n">to</span><span class="p">(</span><span class="n">device</span><span class="p">)</span>
+        <span class="n">model</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">models</span><span class="p">[</span><span class="n">cardinality</span><span class="p">]</span>
+        <span class="c1"># Run the inference</span>
+        <span class="n">output</span><span class="p">,</span> <span class="n">attn_weights</span> <span class="o">=</span> <span class="n">model</span><span class="p">(</span><span class="n">tensor</span><span class="p">)</span>
+        <span class="n">topk_values</span> <span class="o">=</span> <span class="n">torch</span><span class="o">.</span><span class="n">topk</span><span class="p">(</span><span class="n">output</span><span class="p">,</span> <span class="mi">1</span><span class="p">)[</span><span class="mi">1</span><span class="p">]</span><span class="o">.</span><span class="n">tolist</span><span class="p">()</span>
+        <span class="n">list_weight_attn</span> <span class="o">=</span> <span class="n">attn_weights</span><span class="o">.</span><span class="n">tolist</span><span class="p">()</span>
+        <span class="n">inference_pattern</span> <span class="o">=</span> <span class="n">topk_values</span><span class="p">[</span><span class="mi">0</span><span class="p">][</span><span class="mi">0</span><span class="p">]</span>
+        <span class="c1"># Get the attention weigths.</span>
+        <span class="n">attn_weights</span> <span class="o">=</span> <span class="n">list_weight_attn</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span>
+        <span class="c1"># If the prediction is wrong</span>
+        <span class="k">if</span> <span class="n">inference_pattern</span> <span class="o">!=</span> <span class="n">log</span><span class="o">.</span><span class="n">pattern</span><span class="o">.</span><span class="n">id</span><span class="p">:</span>
+            <span class="n">logger</span><span class="o">.</span><span class="n">error</span><span class="p">(</span><span class="s2">&quot;Wrong prediction: &quot;</span> <span class="o">+</span> <span class="nb">str</span><span class="p">(</span><span class="n">inference_pattern</span><span class="p">)</span> <span class="o">+</span> <span class="s2">&quot; instead of [ pattern = &#39;&quot;</span> <span class="o">+</span> <span class="nb">str</span><span class="p">(</span><span class="n">log</span><span class="o">.</span><span class="n">pattern</span><span class="o">.</span><span class="n">pattern_str</span><span class="p">)</span> <span class="o">+</span> <span class="s2">&quot;&#39;, message =&#39;&quot;</span> <span class="o">+</span> <span class="nb">str</span><span class="p">(</span><span class="n">log</span><span class="o">.</span><span class="n">message</span><span class="p">)</span> <span class="o">+</span> <span class="s2">&quot;&#39;, id = &quot;</span> <span class="o">+</span> <span class="nb">str</span><span class="p">(</span><span class="n">log</span><span class="o">.</span><span class="n">pattern</span><span class="o">.</span><span class="n">id</span><span class="p">)</span> <span class="o">+</span> <span class="s2">&quot; ]&quot;</span><span class="p">)</span>
+        <span class="c1"># The prediction is rigth !</span>
+        <span class="k">if</span> <span class="n">inference_pattern</span> <span class="o">==</span> <span class="n">log</span><span class="o">.</span><span class="n">pattern</span><span class="o">.</span><span class="n">id</span><span class="p">:</span>
+            <span class="n">sorted_weight</span> <span class="o">=</span> <span class="nb">sorted</span><span class="p">(</span><span class="n">attn_weights</span><span class="p">,</span> <span class="n">reverse</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
+            <span class="n">list_best_log</span> <span class="o">=</span> <span class="p">[]</span>
+            <span class="c1"># Get the probability</span>
+            <span class="n">probability</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">probability</span><span class="p">(</span><span class="n">attn_weights</span><span class="p">)</span>
+            <span class="c1"># Compute the threshold</span>
+            <span class="n">threshold</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">mean</span><span class="p">(</span><span class="n">probability</span><span class="p">)</span> <span class="o">+</span> <span class="mi">2</span> <span class="o">*</span><span class="n">np</span><span class="o">.</span><span class="n">std</span><span class="p">(</span><span class="n">probability</span><span class="p">)</span>
+            <span class="c1"># Get the value greater than the threshold.</span>
+            <span class="n">nb_value</span> <span class="o">=</span> <span class="nb">len</span><span class="p">(</span><span class="nb">list</span><span class="p">(</span><span class="nb">filter</span><span class="p">(</span><span class="k">lambda</span> <span class="n">x</span><span class="p">:</span> <span class="n">x</span><span class="o">&gt;</span><span class="n">threshold</span><span class="p">,</span> <span class="n">probability</span><span class="p">)))</span>
+            <span class="n">nb_best_log</span> <span class="o">=</span> <span class="n">nb_value</span>
+            <span class="c1"># Add these values to the list</span>
+            <span class="k">for</span> <span class="n">index</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="n">nb_best_log</span><span class="p">):</span>
+                <span class="n">index_best</span> <span class="o">=</span> <span class="n">attn_weights</span><span class="o">.</span><span class="n">index</span><span class="p">(</span><span class="n">sorted_weight</span><span class="p">[</span><span class="n">index</span><span class="p">])</span>
+                <span class="n">best_log</span> <span class="o">=</span> <span class="n">log</span><span class="o">.</span><span class="n">index_slice</span><span class="p">[</span><span class="n">index_best</span><span class="p">]</span>
+                <span class="n">list_best_log</span><span class="o">.</span><span class="n">append</span><span class="p">({</span><span class="s2">&quot;log&quot;</span><span class="p">:</span><span class="n">best_log</span><span class="p">,</span> <span class="s2">&quot;weigth&quot;</span><span class="p">:</span> <span class="n">attn_weights</span><span class="p">[</span><span class="n">index_best</span><span class="p">]})</span>
+            <span class="k">return</span> <span class="n">list_best_log</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="k">return</span> <span class="p">[</span><span class="o">-</span><span class="mi">1</span><span class="p">]</span></div></div>
+
+</pre></div>
+
+          </div>
+        </div>
+      </div>
+      <div class="sphinxsidebar" role="navigation" aria-label="main navigation">
+        <div class="sphinxsidebarwrapper"><div class="relations">
+<h3>Related Topics</h3>
+<ul>
+  <li><a href="../../../index.html">Documentation overview</a><ul>
+  <li><a href="../../index.html">Module code</a><ul>
+  </ul></li>
+  </ul></li>
+</ul>
+</div>
+<div id="searchbox" style="display: none" role="search">
+  <h3>Quick search</h3>
+    <form class="search" action="../../../search.html" method="get">
+      <div><input type="text" name="q" /></div>
+      <div><input type="submit" value="Go" /></div>
+      <input type="hidden" name="check_keywords" value="yes" />
+      <input type="hidden" name="area" value="default" />
+    </form>
+</div>
+<script type="text/javascript">$('#searchbox').show(0);</script>
+        </div>
+      </div>
+      <div class="clearer"></div>
+    </div>
+    <div class="footer">
+      &copy;2020, Marc Platini.
+      
+      |
+      Powered by <a href="http://sphinx-doc.org/">Sphinx 1.6.7</a>
+      &amp; <a href="https://github.com/bitprophet/alabaster">Alabaster 0.7.8</a>
+      
+    </div>
+
+    
+
+    
+  </body>
+</html>
