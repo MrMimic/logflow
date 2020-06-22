@@ -83,12 +83,12 @@ class Dataset:
             return -1
         # Cardinality is higher than the higher cardinality learned during the learning step
         if first_log.cardinality >= cardinality_max:
-            # logger.error(str("Log: " + str(first_log.message) + " is not usable due to cardinality higher than card max"))
+            logger.error(str("Log: " + str(first_log.message) + " is not usable due to cardinality higher than card max"))
             return -1
         # Get the embedding
         self.parser.get_w2v(first_log)
         if type(first_log.vector).__module__ != np.__name__:
-            # logger.error(str("Log: " + str(first_log.message) + " is not usable due to word2vec"))
+            logger.error(str("Log: " + str(first_log.message) + " is not usable due to word2vec"))
             return -1
         # Run until the window is filled
         while len(list_inputs) != self.window_size:
@@ -137,4 +137,12 @@ class Dataset:
         for index in range(range_line, -1, -1):
             if index_line-index >= 0:
                 print(self.list_logs[index_line-index])
+
+    def __len__(self):
+        """Return the size of the dataset
+
+        Returns:
+            int: number of logs of the dataset
+        """
+        return len(self.list_logs)
   

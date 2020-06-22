@@ -20,6 +20,7 @@ class Inference:
                 logger.info("Using GPU")
                 self.device = torch.device('cuda')
             else:
+                logger.info("Using CPU")
                 self.device = torch.device('cpu')
             save_model = self.models[cardinality]
             number_of_classes = save_model['fc0.bias'].shape[0] # Should be saved into the loaded file
@@ -67,8 +68,9 @@ class Inference:
         # If the prediction is wrong
         if inference_pattern != log.pattern.id:
             logger.error("Wrong prediction: " + str(inference_pattern) + " instead of [ pattern = '" + str(log.pattern.pattern_str) + "', message ='" + str(log.message) + "', id = " + str(log.pattern.id) + " ]")
+            return [-1]
         # The prediction is right !
-        if inference_pattern == log.pattern.id:
+        else:
             sorted_weight = sorted(attn_weights, reverse=True)
             list_best_log = []
             # Get the probability
@@ -84,6 +86,4 @@ class Inference:
                 best_log = log.index_slice[index_best]
                 list_best_log.append({"log":best_log, "weigth": attn_weights[index_best]})
             return list_best_log
-        else:
-            return [-1]
 

@@ -15,8 +15,6 @@ class UtilTest(unittest.TestCase):
         self.model = LSTMLayer(num_classes=5)
         self.default_pattern = Pattern(0, [], [])
         self.list_model = {1:self.model.state_dict(), 2:self.model.state_dict(), 3:self.model.state_dict()}
-
-
         default_pattern1 = Pattern(0, [], [])
         default_pattern1.id = 1
         default_pattern2 = Pattern(0, [], [])
@@ -60,6 +58,7 @@ class UtilTest(unittest.TestCase):
     def test_workflow_working(self):
         workflow = Workflow(self.dataset)   
         workflow.detect_workflow(25)
+        workflow.get_tree(25)
 
     def test_workflow_working_with_child(self):
         m = Mock()
@@ -82,3 +81,45 @@ class UtilTest(unittest.TestCase):
 
         workflow = Workflow(self.dataset)   
         workflow.detect_workflow(25)
+
+    def test_workflow_after_last_line(self):
+        workflow = Workflow(self.dataset)  
+        with self.assertRaises(Exception):
+            workflow.get_tree(40)
+
+    def test_workflow_wrong_first_log(self):
+        read_data = pickle.dumps(
+            {
+            'word2vec': {
+                "1": np.asarray([1]*20), "2": np.asarray([2]*20), "3": np.asarray([3]*20),"4": [4]*20, "5": [5]*20, "6": [6]*20, "7": [7]*20
+                }, 
+            'counter_patterns': {
+                1:100, 2:100, 3:100, 4:100, 6:1000, 5:1000
+                },
+            "LSTM": {
+                3:self.model.state_dict()
+                } ,
+            "dict_patterns": {
+                
+                } 
+            })
+        mockOpen = mock_open(read_data=read_data)
+        with patch('builtins.open', mockOpen):
+            dataset_local = Dataset(path_model="/", path_data="/", name_model="/")
+            dataset_local.load_files()
+
+        dataset_local.LSTM = self.list_model
+        dataset_local.list_logs = []
+        default_pattern_local = Pattern(0, [], [])
+        default_pattern_local.id = -1
+        m = Mock()
+        m.side_effect = [default_pattern_local]*30
+        logflow.logsparser.Journal.Journal.find_pattern = m
+        for i in range(30):
+            log = Log("-1", index_line=i)
+            log.pattern = default_pattern_local
+            dataset_local.list_logs.append(log)
+        workflow = Workflow(dataset_local) 
+        #with self.assertRaises(Exception):
+        tree = workflow.detect_workflow(10)
+        self.assertEqual(tree, "-1")

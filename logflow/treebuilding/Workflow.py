@@ -28,7 +28,7 @@ class Workflow:
         Returns:
             Exception: Index of the line is after the maximum loaded index.
         """
-        if index_line > self.dataset.index_line_max:
+        if index_line > len(self.dataset):
             logger.error("Asking for a line after the last line loaded. Check your index_line_max")
             raise Exception("Asking for a line after the last line loaded. Check your index_line_max")
         self.detect_workflow(index_line)
@@ -42,7 +42,7 @@ class Workflow:
         Returns:
             str: representation of the three to be used with graphviz.
         """
-        begin = time.time()
+        # begin = time.time()
         local_tree = Tree()
         first_log = self.dataset.get_slice(index_line)
         # Add the first log to the tree
@@ -118,6 +118,5 @@ class Workflow:
             for end in local_tree.dict_link[start]:
                 string_tree += str(start) + " -> " + str(end) + "[labelfontsize=20, headlabel=\"" + str(np.mean(local_tree.dict_link[start][end]))[:4] + "/" + str(len(local_tree.dict_link[start][end])) + "\"]; \n" # str(self.dict_link[start][end])[:4]
         string_tree += "}"
-        if len(local_tree.list_node_merge) > 6 : 
-            print(" Tree is:", string_tree)
+        print(" Tree is:", string_tree)
         return string_tree

@@ -3,11 +3,6 @@ import torch
 import torch.nn as nn
 from typing import List
 
-if torch.cuda.is_available():
-    device = torch.device('cuda')
-else:
-    device = torch.device('cpu')
-
 class LSTMLayer(nn.Module):
     """Deep learning model
 
@@ -24,6 +19,10 @@ class LSTMLayer(nn.Module):
 
     def __init__(self, num_classes : int, input_size=20, hidden_size=50, num_layers=1, batch_size=128, length_sentence=30, unidirectional=True, test=False):
         super(LSTMLayer, self).__init__()
+        if torch.cuda.is_available():
+            self.device = torch.device('cuda')
+        else:
+            self.device = torch.device('cpu')
         self.input_size = input_size
         self.hidden_size = hidden_size
         self.num_layers = num_layers
@@ -31,15 +30,15 @@ class LSTMLayer(nn.Module):
         self.batch_size = batch_size
         self.test = test
 
-        self.fc0 = nn.Linear(hidden_size, num_classes).to(device)
+        self.fc0 = nn.Linear(hidden_size, num_classes).to(self.device)
 
-        self.cell_LSTM = nn.LSTM(input_size, hidden_size, num_layers, batch_first=True, bidirectional=True).to(device)
-        self.cell = LSTMCell(input_size, hidden_size).to(device)
+        self.cell_LSTM = nn.LSTM(input_size, hidden_size, num_layers, batch_first=True, bidirectional=True).to(self.device)
+        self.cell = LSTMCell(input_size, hidden_size).to(self.device)
 
-        self.attention_weight = nn.Linear(2 * hidden_size, 1).to(device) # Bi
+        self.attention_weight = nn.Linear(2 * hidden_size, 1).to(self.device) # Bi
         # self.attention_weight = nn.Linear(hidden_size, 1).to(device) # Uni
         self.non_learnable_factor = nn.Parameter(torch.ones(1) * 3, requires_grad=False)
-        self.sigmoid = nn.Sigmoid().to(device)
+        self.sigmoid = nn.Sigmoid().to(self.device)
         self.length_sentence = length_sentence
 
     def forward(self, x):
@@ -55,7 +54,7 @@ class LSTMLayer(nn.Module):
         logits = self.attention_weight(x2)
         attention = self.sigmoid(logits * self.non_learnable_factor.expand_as(logits))
         attention = attention.squeeze(2)
-        hidden = torch.zeros(self.num_layers * 1, self.batch_size, self.hidden_size).to(device)
+        hidden = torch.zeros(self.num_layers * 1, self.batch_size, self.hidden_size).to(self.device)
         x = x.transpose(0, 1)
         x_cell = []
         for i in range(self.length_sentence):

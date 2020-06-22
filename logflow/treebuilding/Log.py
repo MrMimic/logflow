@@ -16,6 +16,7 @@ class Log:
         self.line = line
         self.message : List[str] = []
         self.pattern = Pattern.Pattern(0, [], [])
+        self.pattern.id = -1
         self.vector = -1
         self.usable = True
         self.slice : List[List[float]] = []
@@ -23,7 +24,7 @@ class Log:
         self.index_slice : List[int] = []
         self.cardinality = -2
         self.parser_function = parser_function
-        if self.line  != "-1":
+        if self.line != "-1":
             self.preprocess_line()
         self.severity = ""
         self.weight = -1

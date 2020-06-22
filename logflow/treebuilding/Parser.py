@@ -32,7 +32,7 @@ class Parser:
             log.cardinality = len(str(self.counter_patterns[log.pattern.id]))
         except:
             logger.error(str("Log: " + str(log.message) + " is not usable due to pattern detection"))
-
+            
     def get_w2v(self, log : Log):
         """Get the embedding associated with a log and its pattern. 
 
