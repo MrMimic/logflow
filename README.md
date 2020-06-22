@@ -1,5 +1,5 @@
 [![Inline docs](https://img.shields.io/badge/license-GPL-success)](https://www.gnu.org/licenses/gpl-3.0.en.html)
-[![pipeline status](https://gricad-gitlab.univ-grenoble-alpes.fr/platinim/logflow_indus/badges/master/pipeline.svg)](https://gricad-gitlab.univ-grenoble-alpes.fr/platinim/logflow_indus/-/commits/master)
+[![pipeline status](](https://github.com/bds-ailab/logflow/workflows/.github/workflows/main.yml/badge.svg)
 [![coverage report](https://gricad-gitlab.univ-grenoble-alpes.fr/platinim/logflow_indus/badges/master/coverage.svg)](https://gricad-gitlab.univ-grenoble-alpes.fr/platinim/logflow_indus/-/commits/master)
 
 # LogFlow
