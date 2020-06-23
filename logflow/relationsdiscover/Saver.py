@@ -1,5 +1,6 @@
 # Copyright 2020 BULL SAS All rights reserved #
 from logflow.relationsdiscover.Model import LSTMLayer
+from logflow.relationsdiscover.Result import Result
 import pickle
 import os
 from loguru import logger
@@ -24,11 +25,13 @@ class Saver:
         self.cardinality = cardinality
         self.lock = lock
 
-    def save(self, model : LSTMLayer):
+    def save(self, model : LSTMLayer, result : Result, condition="Test"):
         """Save the model
 
         Args:
             model (LSTMLayer): model to save
+            result (Result): result to save
+            condition (str): Test or train results to save
         """
         dict_cardinalities_model = {}
         self.lock.acquire()
@@ -41,6 +44,17 @@ class Saver:
         except:
             dict_cardinalities_model["LSTM"] = {}
             dict_cardinalities_model["LSTM"][self.cardinality] = model.state_dict()
+        # Keep only the latest version of the results
+        try:
+            dict_cardinalities_model["Result"]
+        except:
+            dict_cardinalities_model["Result"] = {}
+        try:
+            dict_cardinalities_model["Result"][self.cardinality]
+        except:
+            dict_cardinalities_model["Result"][self.cardinality] = {}
+        if condition != "temp":
+            dict_cardinalities_model["Result"][self.cardinality][condition] = result
         with open(self.path, "wb") as output_file:
             pickle.dump(dict_cardinalities_model, output_file)
         logger.info("["+str(self.cardinality)+"] Saving: " + self.path)

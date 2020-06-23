@@ -132,7 +132,7 @@ class Worker_single():
                 # Compute the results each 2000 batchs.
                 if index_batch % self.batch_result == 0 and index_batch != 0:
                     result.computing_result(progress=index_batch/len(dataloader_train))
-                    self.saver.save(model=self.model)
+                    self.saver.save(model=self.model, result=result, condition="temp")
                     # Test only on a subsample
                     self.test(subsample=True, subsample_split=0.1)
             # At the end of one epoch, use the all testing test
@@ -140,7 +140,7 @@ class Worker_single():
             result.computing_result(reinit=True, progress=1)
             if self.stopping_condition.stop():
                 logger.info("[Stopping] Cardinality: " + str(self.cardinality) + " " + str(self.stopping_condition) + " stopping learning step.")
-            self.saver.save(model=self.model)
+            self.saver.save(model=self.model, result=result, condition="Train")
         # logger.info("[Test] Cardinality: " + str(self.cardinality) + " " + str(self.stopping_condition) + " stopping learning step.")
         # self.saver.save(model=self.model.state_dict())
 
@@ -166,6 +166,7 @@ class Worker_single():
             if index_batch % self.batch_result == 0:
                 result.computing_result(reinit=False, progress=index_batch/len(dataloader_test))
         self.model.train()
+        self.saver.save(model=self.model, result=result, condition="Test")
         result.computing_result(reinit=True, progress=1)    
         self.stopping_condition.update(result.microf1)
         self.stopping_condition.stop()

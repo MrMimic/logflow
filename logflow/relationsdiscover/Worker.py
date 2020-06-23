@@ -78,7 +78,7 @@ class Worker:
             if index == i:
                 try:
                     worker.test()
-                except IOError:
+                except (IOError, ValueError):
                     logger.critical("Cardinality " + str(worker.cardinality) + " Error when loading file")
             index += 1
 
@@ -96,6 +96,6 @@ class Worker:
             if index == i:
                 try:
                     worker.train()
-                except IOError:
+                except (IOError, ValueError):
                     logger.critical("Cardinality " + str(worker.cardinality) + " Error when loading file")
             index += 1
