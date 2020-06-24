@@ -153,7 +153,7 @@ workflow.get_tree(index_line=24712) # Get the tree of the 2338th line
 That's it.
 
 ### Important parameters
-*path_data* and *path_model* is the path to your data and model directory.
+*path_data* and *path_model* is the path to your directory of data and models.
 
 *size* is the size of your data for the learning step. 
 
