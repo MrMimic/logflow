@@ -5,13 +5,13 @@ with open("README.md", "r") as fh:
 
 setuptools.setup(
     name="LogFlow_Atos_Marc_Platini", # Replace with your own username
-    version="0.0.4",
+    version="0.0.6",
     author="Marc Platini",
     author_email="marc.platini@gmail.com",
     description="LogFlow aims at finding the correlations between the entries of logs files. It is split into 3 parts: a logparser, a relation learner and a tree building to show the correlations",
     long_description=long_description,
     long_description_content_type="text/markdown",
-    url="https://github.com/pypa/sampleproject",
+    url="https://github.com/bds-ailab/logflow",
     packages=setuptools.find_packages(),
     classifiers=[
         "Programming Language :: Python :: 3.6",
@@ -27,6 +27,6 @@ setuptools.setup(
 	"Topic :: Text Processing",
 	"Topic :: Utilities"
     ],
-    python_requires='==3.6.9',
+    python_requires='>=3.6.9',
     install_requires=["numpy>=1.18.5","cython>=0.29.19","typing>=3.7.4.1","loguru>=0.5.0","h5py>=2.10.0","tqdm>=4.46.1","torch>=1.5.0","torchvision>=0.6.0","word2vec>=0.11.1"]
 )
