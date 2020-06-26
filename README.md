@@ -79,7 +79,12 @@ mkdir model
 Now, you are ready !
 
 ### Pip
-TBD
+
+```bash
+pip install -i https://test.pypi.org/simple/ --no-cache-dir --extra-index-url=https://pypi.org/simple/ LogFlow-Atos-Marc-Platini
+```
+
+Note that it's a pre-alpha pip version. Prefer to use Docker installation instead of pip.
 
 ## Getting Started
 
