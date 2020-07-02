@@ -139,7 +139,7 @@ class Worker_single():
             self.test()
             result.computing_result(reinit=True, progress=1)
             if self.stopping_condition.stop():
-                logger.info("[Stopping] Cardinality: " + str(self.cardinality) + " " + str(self.stopping_condition) + " stopping learning step.")
+                logger.debug("[Stopping] Cardinality: " + str(self.cardinality) + " " + str(self.stopping_condition) + " stopping learning step.")
             self.saver.save(model=self.model, result=result, condition="Train")
         # logger.info("[Test] Cardinality: " + str(self.cardinality) + " " + str(self.stopping_condition) + " stopping learning step.")
         # self.saver.save(model=self.model.state_dict())

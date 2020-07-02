@@ -57,7 +57,7 @@ class Worker:
         """
         self.workers = []
         for cardinality in self.list_cardinalities:
-            self.workers.append(Worker_single(cardinality=cardinality, batch_size=self.batch_size, lock=self.lock))
+            self.workers.append(Worker_single(cardinality=cardinality, batch_size=self.batch_size, lock=self.lock, path_model=self.path_model, name_dataset=self.name_dataset))
         if self.multithreading:
             torch.multiprocessing.spawn(Worker.execute_test, args=(self.workers), daemon=False, nprocs=len(self.workers), join=True)
         else:

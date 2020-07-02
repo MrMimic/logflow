@@ -2,9 +2,7 @@
 from loguru import logger
 from collections import Counter
 from logflow.logsparser.Pattern import Pattern
-import time
 from typing import Dict, List, Tuple
-
 # TODO: Test performance of static vs method
 
 class Journal:
@@ -18,9 +16,10 @@ class Journal:
         large_file (bool, optional): Optimization for the reading of one large file. Not implemented yet. Defaults to False.
         pointer (int, optional): Optimization for the reading of one large file. Not implemented yet. Defaults to -1.
         encoding (str, optional): Encoding of the files read.  Defaults to "latin-1".
+        sort_function (function, optional): Function to sort the logs. Defaults to "", means logs are not sorted.
     """
 
-    def __init__(self, parser_message, path : str , associated_pattern=False, dict_patterns = {}, large_file=False, pointer=-1, encoding="latin-1"):
+    def __init__(self, parser_message, path : str , associated_pattern=False, dict_patterns = {}, large_file=False, pointer=-1, encoding="latin-1", sort_function=""):
         assert path != ""
         assert parser_message != ""
         if associated_pattern:
@@ -30,6 +29,7 @@ class Journal:
         if large_file:
             assert pointer != -1
             self.pointer = pointer
+        self.sort_function = sort_function
         self.parser_message = parser_message
         self.encoding = encoding
         self.dict_words_descriptors : Dict[str, str]= {}
@@ -51,7 +51,6 @@ class Journal:
             self.dict_message = {}
         else:
             # We associate lines and patterns
-            self.default_pattern = Pattern(0, [], [])
             self.dict_message_associated : Dict[Tuple[str, ...], int]= {}
             self.list_patterns = []
             self.read_file()
@@ -77,7 +76,7 @@ class Journal:
             # Get the frozen message because python can't used list as dictionnary key.
             frozen_message : Tuple[str, ...] = tuple(message)
             if frozen_message in self.dict_message:
-                 # If the message is already in the dict, get the associated descriptors and add +1
+                # If the message is already in the dict, get the associated descriptors and add +1
                 self.counter_logs[self.dict_message[frozen_message]] += 1
             else:
                 # Else, compute the descriptors, add the line and descriptors into the dict, and add the line of descriptors to the dict.
@@ -101,9 +100,7 @@ class Journal:
                 self.list_patterns.append(self.dict_message_associated[frozen_message])
             else:
                 # Else, compute it.
-                best_pattern = Journal.find_pattern(message, self.dict_patterns, self.default_pattern)
-                # if best_pattern.id == -1:
-                #     print(message, best_pattern, line, frozen_message)
+                best_pattern = Journal.find_pattern(message, self.dict_patterns)
                 self.dict_message_associated[frozen_message] = best_pattern.id
                 self.list_patterns.append(best_pattern.id)
     
@@ -115,8 +112,13 @@ class Journal:
             try:
                 with open(self.path, "r", encoding=self.encoding) as file_open: 
                     if self.associated_pattern:
-                        for line in file_open.readlines():
-                            self.associate_pattern(line)
+                        if self.sort_function != "":
+                            lines = self.sort_function(list(file_open.readlines()))
+                            for line in lines:
+                                self.associate_pattern(line)
+                        else:
+                            for line in file_open.readlines():
+                                self.associate_pattern(line)
                     else:
                         for line in file_open.readlines():
                             self.count_log(line)
@@ -128,13 +130,18 @@ class Journal:
                 try:
                     with open(file_path, "r", encoding=self.encoding) as file_open: 
                         if self.associated_pattern:
-                            for line in file_open.readlines():
-                                self.associate_pattern(line)
+                            if self.sort_function != "":
+                                lines = self.sort_function(list(file_open.readlines()))
+                                for line in lines:
+                                    self.associate_pattern(line)
+                            else:
+                                for line in file_open.readlines():
+                                    self.associate_pattern(line)
                         else:
                             for line in file_open.readlines():
                                 self.count_log(line)
                 except:
-                   logger.error("Error while reading the file: " +str(file_path))
+                  logger.error("Error while reading the file: " +str(file_path))
 
     def filter_word(self, word : str) -> str:
         """Get the descriptors of the word
@@ -152,28 +159,7 @@ class Journal:
         else:
             if word in self.dict_words_descriptors:
                 return self.dict_words_descriptors[word]
-            vector = ["0"]*5
-            number = False
-            lower = False
-            upper = False
-            alnum = False
-            for letter in word:
-                if letter.isdigit():
-                    vector[3] = "1"
-                    number = True
-                elif letter.islower():
-                    vector[1] = "1"
-                    lower = True
-                elif letter.isupper():
-                    vector[0] = "1"
-                    upper = True
-                elif not letter.isalnum():
-                    vector[2] = "1"
-                    alnum = True
-                if number and lower and upper and alnum:
-                    break
-            vector[4] = str(len(word))
-            str_vector = ''.join(vector)
+            str_vector = Journal.create_vector(word)
             self.dict_words_descriptors.setdefault(word, str_vector)
             return str_vector
 
@@ -193,7 +179,7 @@ class Journal:
             return False
 
     @staticmethod
-    def find_pattern(message : List[str], dict_patterns : dict, default_pattern : Pattern) -> Pattern:
+    def find_pattern(message : List[str], dict_patterns : dict) -> Pattern:
         """Find the pattern associated to a log.
         
         The best pattern is the pattern with the maximum common words with the line.
@@ -201,21 +187,16 @@ class Journal:
         Args:
             message (List[str]): list of the words of the message part of the log.
             dict_patterns (dict): the dict of patterns.
-            default_pattern (Pattern): the default pattern.
 
         Returns:
             Pattern: the pattern associated to the line.
         """
-        # TODO : check the computation time to create the default pattern each time.
         # Create a default pattern to compare it to the other ones to find the best pattern.
-        default_pattern = Pattern(0, [], [])
-        best_pattern = default_pattern
+        best_pattern = Pattern(0, [], [])
         # Get the patterns with the same cardinality as the line. The cardinality of a pattern is the cardinality used for finding this pattern and not this number of words.
         dict_patterns_size = dict_patterns[len(message)]
         # Get the descriptors
-        # message = [Journal.static_filter_word(word) for word in message] #Already done
         # Begin by the bigger pattern to save time.
-        #for len_ms in dict_patterns:
         for size_pattern in sorted(dict_patterns_size.keys(), reverse=True):
             for pattern in dict_patterns_size[size_pattern]:
                 nb_word_match = 0
@@ -229,12 +210,6 @@ class Journal:
             # If new size if lower than the size of the actual best pattern, stop the detection. 
             if len(best_pattern) > size_pattern:
                 break
-        # if "Applicability(ComponentAnalyzerEvaluateSelfUpdate)" in line:
-        #     # print(line)
-        #     for size in dict_patterns[7]:
-        #         for pattern in dict_patterns[7][size]:
-        #             print("Length:", 7, "Size: ", size, "Pattern: ", pattern)
-        #     print(best_pattern, line, message, len(message))
         return best_pattern
 
     @staticmethod
@@ -268,26 +243,38 @@ class Journal:
         elif word.isalpha() or len(word) == 1:
             return word
         else:
-            vector = ["0"]*5
-            number = False
-            lower = False
-            upper = False
-            alnum = False
-            for letter in word:
-                if letter.isdigit():
-                    vector[3] = "1"
-                    number = True
-                elif letter.islower():
-                    vector[1] = "1"
-                    lower = True
-                elif letter.isupper():
-                    vector[0] = "1"
-                    upper = True
-                elif not letter.isalnum():
-                    vector[2] = "1"
-                    alnum = True
-                if number and lower and upper and alnum:
-                    break
-            vector[4] = str(len(word))
-            str_vector = ''.join(vector)
+            return Journal.create_vector(word)
+
+    @staticmethod
+    def create_vector(word : str) -> str:
+        """Create the vector of descriptors associated to a word
+
+        Args:
+            word (str): the word to describe using descriptors
+
+        Returns:
+            str: the descriptors
+        """
+        vector = ["0"]*5
+        number = False
+        lower = False
+        upper = False
+        alnum = False
+        for letter in word:
+            if letter.isdigit():
+                vector[3] = "1"
+                number = True
+            elif letter.islower():
+                vector[1] = "1"
+                lower = True
+            elif letter.isupper():
+                vector[0] = "1"
+                upper = True
+            elif not letter.isalnum():
+                vector[2] = "1"
+                alnum = True
+            if number and lower and upper and alnum:
+                break
+        vector[4] = str(len(word))
+        str_vector = ''.join(vector)
         return str_vector

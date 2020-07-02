@@ -23,9 +23,10 @@ class Dataset:
             path_model (str, optional): Path of the folder to save the patterns. Defaults to "".
             concat (bool, optional): Process a chunck of files per thread instead of one file per thread. Increase the performance due to the poor multiprocessing performance of Python. Defaults to True.
             parser_function (function, optional): Function to split the log entry and get the message part. Defaults to "", means split according to space and uses the words after the 9th position.
-    
+            sort_function (function, optional): Function to sort the logs. Defaults to "", means logs are not sorted.
+            nb_files_per_chunck (int, optional): Number of files per chunck. Defaults to 50.
     """
-    def __init__(self, list_files : list, dict_patterns={}, path_data="", saving=False, name_dataset="", path_model="", concat=True, parser_function=""):
+    def __init__(self, list_files : list, dict_patterns={}, path_data="", saving=False, name_dataset="", path_model="", concat=True, parser_function="", sort_function="", nb_files_per_chunck=50):
         assert list_files != []
         self.list_journal : List[str] = []
         self.list_files = list_files
@@ -35,6 +36,8 @@ class Dataset:
         self.path_model = path_model
         self.saving = saving
         self.concat = concat
+        self.sort_function = sort_function
+        self.nb_files_per_chunck = nb_files_per_chunck
         if name_dataset == "":
             self.name_dataset = ''.join(random.choices(string.ascii_uppercase + string.ascii_lowercase + string.digits, k=10))
         else:
@@ -49,8 +52,7 @@ class Dataset:
         else:
             self.read_files_parsing(concat=self.concat)
 
-
-    def read_files_parsing(self, multithreading=True, concat=True, nb_files_per_chunck=50):
+    def read_files_parsing(self, multithreading=True, concat=True):
         """Read the files and compute the patterns.
 
         If a first step, the function merges the list of files into a list of chunck. Each chunck contains nb_files_per_chunck files. It is done to
@@ -63,12 +65,11 @@ class Dataset:
         Args:
             multithreading (bool, optional): Use the multithreading implementation. Defaults to True.
             concat (bool, optional): Use a chunck of files per thread instead of one file per thread. Defaults to True.
-            nb_files_per_chunck (int, optional): Number of files per chunck. Defaults to 50.
         """
         if multithreading:
             logger.info("Multithreading is activated, using all CPUs available")
             if concat:
-                self.list_files = [self.list_files[i:i + nb_files_per_chunck] for i in range(0, len(self.list_files), nb_files_per_chunck)]
+                self.list_files = [self.list_files[i:i + self.nb_files_per_chunck] for i in range(0, len(self.list_files), self.nb_files_per_chunck)]
                 logger.info("Starting " +str(len(self.list_files))+ " chunks")
             else:
                 self.list_files = [self.list_files]
@@ -89,7 +90,7 @@ class Dataset:
                 nb_counter += len(self.counter_general_per_cardinality[value])
             logger.debug("Parser " + str(nb_logs) + " logs with " + str(nb_counter) + " counter and " + str(len(self.counter_general_per_cardinality)) + " cardinalities")
 
-    def read_files_associating(self, multithreading=True, concat=True, nb_files_per_chunck=50):
+    def read_files_associating(self, multithreading=True, concat=True):
         """Read the files and associate one pattern to each line of the files.
 
         If a first step, the function merges the list of files into a list of chunck. Each chunck contains nb_files_per_chunck files. It is done to
@@ -107,9 +108,9 @@ class Dataset:
         if multithreading:
             logger.info("Multithreading is activated, using all CPUs available")
             if concat:
-                self.list_files = [self.list_files[i:i + nb_files_per_chunck] for i in range(0, len(self.list_files), nb_files_per_chunck)]
+                self.list_files = [self.list_files[i:i + self.nb_files_per_chunck] for i in range(0, len(self.list_files), self.nb_files_per_chunck)]
                 logger.info("Starting " +str(len(self.list_files))+ " chunks")
-            self.list_journal = [Journal(path=path, parser_message=self.parser_function, associated_pattern=True, dict_patterns=self.dict_patterns) for path in self.list_files]
+            self.list_journal = [Journal(path=path, parser_message=self.parser_function, sort_function=self.sort_function, associated_pattern=True, dict_patterns=self.dict_patterns) for path in self.list_files]
             with Pool() as mp:
                 for journal in tqdm(mp.imap_unordered(Dataset.execute, self.list_journal), total=len(self.list_journal)):
                     self.list_patterns += journal.list_patterns
