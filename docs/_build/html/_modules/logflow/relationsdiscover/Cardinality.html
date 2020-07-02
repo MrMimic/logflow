@@ -1,0 +1,193 @@
+
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN"
+  "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+
+<html xmlns="http://www.w3.org/1999/xhtml">
+  <head>
+    <meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
+    <title>logflow.relationsdiscover.Cardinality &#8212; LogFlow 0.1 documentation</title>
+    <link rel="stylesheet" href="../../../_static/alabaster.css" type="text/css" />
+    <link rel="stylesheet" href="../../../_static/pygments.css" type="text/css" />
+    <script type="text/javascript">
+      var DOCUMENTATION_OPTIONS = {
+        URL_ROOT:    '../../../',
+        VERSION:     '0.1',
+        COLLAPSE_INDEX: false,
+        FILE_SUFFIX: '.html',
+        HAS_SOURCE:  true,
+        SOURCELINK_SUFFIX: '.txt'
+      };
+    </script>
+    <script type="text/javascript" src="../../../_static/jquery.js"></script>
+    <script type="text/javascript" src="../../../_static/underscore.js"></script>
+    <script type="text/javascript" src="../../../_static/doctools.js"></script>
+    <link rel="index" title="Index" href="../../../genindex.html" />
+    <link rel="search" title="Search" href="../../../search.html" />
+   
+  <link rel="stylesheet" href="../../../_static/custom.css" type="text/css" />
+  
+  <meta name="viewport" content="width=device-width, initial-scale=0.9, maximum-scale=0.9" />
+
+  </head>
+  <body>
+  
+
+    <div class="document">
+      <div class="documentwrapper">
+        <div class="bodywrapper">
+          <div class="body" role="main">
+            
+  <h1>Source code for logflow.relationsdiscover.Cardinality</h1><div class="highlight"><pre>
+<span></span><span class="kn">from</span> <span class="nn">collections</span> <span class="k">import</span> <span class="n">Counter</span>
+<span class="kn">from</span> <span class="nn">torch.utils.data</span> <span class="k">import</span> <span class="n">Dataset</span>
+<span class="kn">import</span> <span class="nn">word2vec</span>  <span class="c1"># type: ignore</span>
+<span class="kn">import</span> <span class="nn">h5py</span>  <span class="c1"># type: ignore</span>
+<span class="kn">from</span> <span class="nn">loguru</span> <span class="k">import</span> <span class="n">logger</span>
+<span class="kn">import</span> <span class="nn">time</span>
+<span class="kn">import</span> <span class="nn">pickle</span>
+<span class="kn">import</span> <span class="nn">numpy</span> <span class="k">as</span> <span class="nn">np</span> <span class="c1"># type: ignore</span>
+<span class="n">DTYPE</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">float32</span>
+<span class="kn">from</span> <span class="nn">typing</span> <span class="k">import</span> <span class="n">Dict</span><span class="p">,</span> <span class="n">List</span><span class="p">,</span> <span class="n">Any</span>
+
+
+<div class="viewcode-block" id="Cardinality"><a class="viewcode-back" href="../../../docs/relationsdiscover/doc.html#logflow.relationsdiscover.Cardinality.Cardinality">[docs]</a><span class="k">class</span> <span class="nc">Cardinality</span><span class="p">(</span><span class="n">Dataset</span><span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot; A cardinality describes the number of examples per pattern. Each cardinality contains a 10 power examples. For example, the cardinality 7 contains all the patterns with 10^7 examples. It extendes</span>
+<span class="sd">    the dataloader class of pytorch to be able the provide the data to the pytorch deep learning model.</span>
+
+<span class="sd">    Args:</span>
+<span class="sd">        cardinality (int): the value of the cardinality</span>
+<span class="sd">        path_list_classes (str): path to the data. The data is the list of patterns to learn.</span>
+<span class="sd">        path_w2v ([type]): path to the word2vec model. The word2vec model is used to turn a pattern into a vector. </span>
+<span class="sd">        size (int, optional): number of examples to use. Defaults to -1.</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+
+    <span class="k">def</span> <span class="nf">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">cardinality</span> <span class="p">:</span> <span class="nb">int</span><span class="p">,</span> <span class="n">path_list_classes</span> <span class="p">:</span> <span class="nb">str</span><span class="p">,</span> <span class="n">path_w2v</span><span class="p">,</span> <span class="n">size</span><span class="o">=-</span><span class="mi">1</span><span class="p">):</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">cardinality</span> <span class="o">=</span> <span class="n">cardinality</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">path_list_classes</span> <span class="o">=</span> <span class="n">path_list_classes</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">size</span> <span class="o">=</span> <span class="n">size</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">path_model_w2v</span> <span class="o">=</span> <span class="n">path_w2v</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">number_of_classes</span> <span class="o">=</span> <span class="mi">0</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">set_classes_kept</span> <span class="o">=</span> <span class="p">()</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">loaded</span> <span class="o">=</span> <span class="kc">False</span>
+
+<div class="viewcode-block" id="Cardinality.compute_position"><a class="viewcode-back" href="../../../docs/relationsdiscover/doc.html#logflow.relationsdiscover.Cardinality.Cardinality.compute_position">[docs]</a>    <span class="k">def</span> <span class="nf">compute_position</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;Compute the position of each example in the initial list of patterns. Indeed, one cardinality learns only to predict the patterns with a specific cardinality. We store the index</span>
+<span class="sd">        of each pattern with the right cardinality on the initial data to be able to provide it to the model during the learning step.</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="n">np_list_classes</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">asarray</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">list_classes</span><span class="p">)</span>
+        <span class="n">set_classes</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">unique</span><span class="p">(</span><span class="n">np_list_classes</span><span class="p">)</span>
+        <span class="n">list_classes_kept</span> <span class="o">=</span> <span class="p">[]</span>
+        <span class="k">for</span> <span class="n">event</span> <span class="ow">in</span> <span class="n">set_classes</span><span class="p">:</span>
+            <span class="n">cardinality</span> <span class="o">=</span> <span class="nb">len</span><span class="p">(</span><span class="nb">str</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">counter</span><span class="p">[</span><span class="n">event</span><span class="p">]))</span>
+            <span class="k">if</span> <span class="n">cardinality</span> <span class="o">==</span> <span class="bp">self</span><span class="o">.</span><span class="n">cardinality</span><span class="p">:</span>
+                <span class="n">list_classes_kept</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">event</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">set_classes_kept</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">unique</span><span class="p">(</span><span class="n">list_classes_kept</span><span class="p">)</span>
+        <span class="n">ix</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">isin</span><span class="p">(</span><span class="n">np_list_classes</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">set_classes_kept</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">list_position</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">where</span><span class="p">(</span><span class="n">ix</span><span class="p">)[</span><span class="mi">0</span><span class="p">]</span>
+        <span class="nb">print</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">list_position</span><span class="p">)</span>
+        <span class="k">try</span><span class="p">:</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">number_of_classes</span> <span class="o">=</span> <span class="nb">max</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">set_classes_kept</span><span class="p">)</span> <span class="o">+</span> <span class="mi">1</span>
+        <span class="k">except</span><span class="p">:</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">number_of_classes</span> <span class="o">=</span> <span class="mi">0</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">loaded</span> <span class="o">=</span> <span class="kc">True</span></div>
+
+<div class="viewcode-block" id="Cardinality.load_files"><a class="viewcode-back" href="../../../docs/relationsdiscover/doc.html#logflow.relationsdiscover.Cardinality.Cardinality.load_files">[docs]</a>    <span class="k">def</span> <span class="nf">load_files</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;Load the data and the word2vec model.</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="n">logger</span><span class="o">.</span><span class="n">info</span><span class="p">(</span><span class="s2">&quot;Loading file for cardinality: &quot;</span> <span class="o">+</span> <span class="nb">str</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">cardinality</span><span class="p">)</span> <span class="o">+</span> <span class="s2">&quot; &quot;</span> <span class="o">+</span> <span class="nb">str</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">path_list_classes</span><span class="p">))</span>
+        <span class="k">with</span> <span class="n">h5py</span><span class="o">.</span><span class="n">File</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">path_list_classes</span><span class="p">,</span> <span class="s1">&#39;r&#39;</span><span class="p">)</span> <span class="k">as</span> <span class="n">file_h5py</span><span class="p">:</span>
+            <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">size</span> <span class="o">!=</span> <span class="o">-</span><span class="mi">1</span><span class="p">:</span>
+                <span class="bp">self</span><span class="o">.</span><span class="n">list_classes</span> <span class="o">=</span> <span class="n">file_h5py</span><span class="p">[</span><span class="s1">&#39;list_classes&#39;</span><span class="p">][:</span><span class="bp">self</span><span class="o">.</span><span class="n">size</span><span class="p">]</span>
+            <span class="k">else</span><span class="p">:</span>
+                <span class="bp">self</span><span class="o">.</span><span class="n">list_classes</span> <span class="o">=</span> <span class="n">file_h5py</span><span class="p">[</span><span class="s1">&#39;list_classes&#39;</span><span class="p">][()]</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">list_position</span> <span class="o">=</span> <span class="p">[]</span>
+        <span class="k">with</span> <span class="nb">open</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">path_model_w2v</span><span class="p">,</span> <span class="s2">&quot;rb&quot;</span><span class="p">)</span> <span class="k">as</span> <span class="n">file_model</span><span class="p">:</span>
+            <span class="n">dict_local</span> <span class="o">=</span> <span class="n">pickle</span><span class="o">.</span><span class="n">load</span><span class="p">(</span><span class="n">file_model</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">w2v</span> <span class="o">=</span> <span class="n">dict_local</span><span class="p">[</span><span class="s2">&quot;word2vec&quot;</span><span class="p">]</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">counter</span> <span class="o">=</span> <span class="n">dict_local</span><span class="p">[</span><span class="s2">&quot;counter_patterns&quot;</span><span class="p">]</span></div>
+
+    <span class="k">def</span> <span class="nf">__len__</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">int</span><span class="p">:</span>
+        <span class="sd">&quot;&quot;&quot;Return the length of the data (the number of examples)</span>
+
+<span class="sd">        Returns:</span>
+<span class="sd">            int: length of the data.</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="k">return</span> <span class="nb">len</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">list_position</span><span class="p">)</span>
+
+    <span class="k">def</span> <span class="nf">__getitem__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">idx</span> <span class="p">:</span> <span class="nb">int</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">Dict</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="n">Any</span><span class="p">]:</span>
+        <span class="sd">&quot;&quot;&quot;Implement the get_item method used by the dataloader. For each pattern, we select the 30 previous patterns to learn to predict it. 30 is the size of the window.</span>
+<span class="sd">        For each pattern in the window, the w2v method is then used to get the corresponding vector. Note that the previous selected pattern must be different from the pattern to predict.</span>
+
+<span class="sd">        For example, with a window of 5. </span>
+<span class="sd">        </span>
+<span class="sd">        Initial data : [10, 4, 5, 3, 10, 9, 5, 3, 5]. </span>
+
+<span class="sd">        The last pattern is the pattern to predict (5 here.)</span>
+
+<span class="sd">        The window selected to predict this pattern is [4, 3, 10, 9, 3]. The logs corresponding to the pattern &quot;5&quot; are removed because we want to predict this pattern.</span>
+
+<span class="sd">        Returns:</span>
+<span class="sd">            dict: the pattern to predict and its vector</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="n">index_real</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">list_position</span><span class="p">[</span><span class="n">idx</span><span class="p">]</span>
+        <span class="n">list_embedding</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">zeros</span><span class="p">((</span><span class="mi">30</span><span class="p">,</span> <span class="mi">20</span><span class="p">),</span> <span class="n">dtype</span><span class="o">=</span><span class="n">DTYPE</span><span class="p">)</span>
+        <span class="n">index_add</span> <span class="o">=</span> <span class="mi">0</span>
+        <span class="n">output</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">list_classes</span><span class="p">[</span><span class="n">index_real</span><span class="p">]</span>
+        <span class="n">index</span> <span class="o">=</span> <span class="n">index_real</span> <span class="o">-</span> <span class="mi">1</span> 
+        <span class="k">while</span> <span class="n">index_add</span> <span class="o">!=</span> <span class="mi">30</span><span class="p">:</span>
+            <span class="c1"># If pattern is different from the output.</span>
+            <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">list_classes</span><span class="p">[</span><span class="n">index</span><span class="p">]</span> <span class="o">!=</span> <span class="n">output</span><span class="p">:</span>
+                <span class="n">list_embedding</span><span class="p">[</span><span class="n">index_add</span><span class="p">]</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">w2v</span><span class="p">[</span><span class="nb">str</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">list_classes</span><span class="p">[</span><span class="n">index</span><span class="p">])]</span>
+                <span class="n">index_add</span> <span class="o">+=</span> <span class="mi">1</span>
+            <span class="c1"># If we don&#39;t have</span>
+            <span class="k">if</span> <span class="n">index</span> <span class="o">&lt;</span> <span class="mi">0</span> <span class="ow">and</span> <span class="nb">len</span><span class="p">(</span><span class="n">list_embedding</span><span class="p">)</span> <span class="o">==</span> <span class="mi">0</span><span class="p">:</span>
+                <span class="k">return</span> <span class="p">{</span><span class="s1">&#39;output&#39;</span><span class="p">:</span><span class="o">-</span><span class="mi">1</span><span class="p">,</span> <span class="s1">&#39;input&#39;</span><span class="p">:[</span><span class="o">-</span><span class="mi">1</span><span class="p">]}</span>
+            <span class="k">if</span> <span class="n">index</span> <span class="o">&lt;</span> <span class="mi">0</span><span class="p">:</span>
+                <span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="mi">30</span> <span class="o">-</span> <span class="n">index_add</span><span class="p">):</span>
+                    <span class="n">list_embedding</span><span class="p">[</span><span class="n">index_add</span><span class="p">]</span> <span class="o">=</span> <span class="n">list_embedding</span><span class="p">[</span><span class="o">-</span><span class="mi">1</span><span class="p">]</span>
+                    <span class="n">index_add</span> <span class="o">+=</span> <span class="mi">1</span>
+            <span class="n">index</span> <span class="o">-=</span> <span class="mi">1</span>
+        <span class="k">return</span> <span class="p">{</span><span class="s1">&#39;output&#39;</span><span class="p">:</span><span class="n">output</span><span class="p">,</span> <span class="s1">&#39;input&#39;</span><span class="p">:</span><span class="n">list_embedding</span><span class="p">}</span></div>
+</pre></div>
+
+          </div>
+        </div>
+      </div>
+      <div class="sphinxsidebar" role="navigation" aria-label="main navigation">
+        <div class="sphinxsidebarwrapper"><div class="relations">
+<h3>Related Topics</h3>
+<ul>
+  <li><a href="../../../index.html">Documentation overview</a><ul>
+  <li><a href="../../index.html">Module code</a><ul>
+  </ul></li>
+  </ul></li>
+</ul>
+</div>
+<div id="searchbox" style="display: none" role="search">
+  <h3>Quick search</h3>
+    <form class="search" action="../../../search.html" method="get">
+      <div><input type="text" name="q" /></div>
+      <div><input type="submit" value="Go" /></div>
+      <input type="hidden" name="check_keywords" value="yes" />
+      <input type="hidden" name="area" value="default" />
+    </form>
+</div>
+<script type="text/javascript">$('#searchbox').show(0);</script>
+        </div>
+      </div>
+      <div class="clearer"></div>
+    </div>
+    <div class="footer">
+      &copy;2020, Marc Platini.
+      
+      |
+      Powered by <a href="http://sphinx-doc.org/">Sphinx 1.6.7</a>
+      &amp; <a href="https://github.com/bitprophet/alabaster">Alabaster 0.7.8</a>
+      
+    </div>
+
+    
+
+    
+  </body>
+</html>

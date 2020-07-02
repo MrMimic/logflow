@@ -1,0 +1,224 @@
+
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN"
+  "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+
+<html xmlns="http://www.w3.org/1999/xhtml">
+  <head>
+    <meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
+    <title>logflow.logsparser.Embedding &#8212; LogFlow 0.1 documentation</title>
+    <link rel="stylesheet" href="../../../_static/alabaster.css" type="text/css" />
+    <link rel="stylesheet" href="../../../_static/pygments.css" type="text/css" />
+    <script type="text/javascript">
+      var DOCUMENTATION_OPTIONS = {
+        URL_ROOT:    '../../../',
+        VERSION:     '0.1',
+        COLLAPSE_INDEX: false,
+        FILE_SUFFIX: '.html',
+        HAS_SOURCE:  true,
+        SOURCELINK_SUFFIX: '.txt'
+      };
+    </script>
+    <script type="text/javascript" src="../../../_static/jquery.js"></script>
+    <script type="text/javascript" src="../../../_static/underscore.js"></script>
+    <script type="text/javascript" src="../../../_static/doctools.js"></script>
+    <link rel="index" title="Index" href="../../../genindex.html" />
+    <link rel="search" title="Search" href="../../../search.html" />
+   
+  <link rel="stylesheet" href="../../../_static/custom.css" type="text/css" />
+  
+  <meta name="viewport" content="width=device-width, initial-scale=0.9, maximum-scale=0.9" />
+
+  </head>
+  <body>
+  
+
+    <div class="document">
+      <div class="documentwrapper">
+        <div class="bodywrapper">
+          <div class="body" role="main">
+            
+  <h1>Source code for logflow.logsparser.Embedding</h1><div class="highlight"><pre>
+<span></span><span class="kn">import</span> <span class="nn">word2vec</span> <span class="c1"># type: ignore</span>
+<span class="kn">import</span> <span class="nn">os</span>
+<span class="kn">import</span> <span class="nn">h5py</span> <span class="c1"># type: ignore</span>
+<span class="kn">from</span> <span class="nn">loguru</span> <span class="k">import</span> <span class="n">logger</span>
+<span class="kn">import</span> <span class="nn">tempfile</span>
+<span class="kn">from</span> <span class="nn">multiprocessing</span> <span class="k">import</span> <span class="n">Pool</span>
+<span class="kn">from</span> <span class="nn">collections</span> <span class="k">import</span> <span class="n">Counter</span>
+<span class="kn">import</span> <span class="nn">pickle</span>
+<span class="kn">from</span> <span class="nn">tqdm</span> <span class="k">import</span> <span class="n">tqdm</span> <span class="c1"># type: ignore</span>
+<span class="kn">import</span> <span class="nn">time</span>
+<span class="kn">import</span> <span class="nn">numpy</span> <span class="k">as</span> <span class="nn">np</span> <span class="c1"># type: ignore</span>
+<span class="kn">from</span> <span class="nn">itertools</span> <span class="k">import</span> <span class="n">repeat</span>
+<span class="kn">from</span> <span class="nn">typing</span> <span class="k">import</span> <span class="n">List</span><span class="p">,</span> <span class="n">Tuple</span>
+
+<div class="viewcode-block" id="Embedding"><a class="viewcode-back" href="../../../docs/logsparser/doc.html#logflow.logsparser.Embedding.Embedding">[docs]</a><span class="k">class</span> <span class="nc">Embedding</span><span class="p">:</span>
+    <span class="sd">&quot;&quot;&quot;Compute the embedding of each pattern based on the word2vec method. Here, each line is represented by the ID (integer) of its pattern.</span>
+
+<span class="sd">    Note that the word2vec is based on the C++ google implementation. Then, we need to use a file and we cannot use directly the list_classes for the learning step. For best performance, we use</span>
+<span class="sd">    temporary file to write the list_classes as a file and then remove it.</span>
+
+<span class="sd">        Args:</span>
+<span class="sd">            list_classes (list, optional): list of patterns. Defaults to [].</span>
+<span class="sd">            loading (bool, optional): load the list of patterns from a file. Note that you must provide list_classes is loading is False. Defaults to False.</span>
+<span class="sd">            name_dataset (str, optional): name of the dataset. Use for loading it. Defaults to &quot;&quot;.</span>
+<span class="sd">            path_data (str, optional): path to the dataset. Defaults to &quot;&quot;.</span>
+<span class="sd">            path_model (str, optional): path to the model. Defaults to &quot;&quot;.</span>
+<span class="sd">            dir_tmp (str, optional): path used for the temporary file. This path can be on SSD or RAM to better performance. Defaults to &quot;/tmp/&quot;.</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+    <span class="k">def</span> <span class="nf">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">list_classes</span><span class="o">=</span><span class="p">[],</span> <span class="n">loading</span><span class="o">=</span><span class="kc">False</span><span class="p">,</span> <span class="n">name_dataset</span><span class="o">=</span><span class="s2">&quot;&quot;</span><span class="p">,</span> <span class="n">path_data</span><span class="o">=</span><span class="s2">&quot;&quot;</span><span class="p">,</span> <span class="n">path_model</span><span class="o">=</span><span class="s2">&quot;&quot;</span><span class="p">,</span> <span class="n">dir_tmp</span><span class="o">=</span><span class="s2">&quot;&quot;</span><span class="p">):</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">loading</span> <span class="o">=</span> <span class="n">loading</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">name_dataset</span> <span class="o">=</span> <span class="n">name_dataset</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">path_data</span> <span class="o">=</span> <span class="n">path_data</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">path_model</span> <span class="o">=</span> <span class="n">path_model</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">dir_tmp</span> <span class="o">=</span> <span class="n">dir_tmp</span>
+        <span class="k">assert</span> <span class="bp">self</span><span class="o">.</span><span class="n">path_model</span> <span class="o">!=</span> <span class="s2">&quot;&quot;</span>
+        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">loading</span><span class="p">:</span>
+            <span class="n">logger</span><span class="o">.</span><span class="n">info</span><span class="p">(</span><span class="s2">&quot;Loading file for embeddings: &quot;</span> <span class="o">+</span> <span class="bp">self</span><span class="o">.</span><span class="n">path_data</span> <span class="o">+</span> <span class="bp">self</span><span class="o">.</span><span class="n">name_dataset</span> <span class="o">+</span> <span class="s2">&quot;.lf&quot;</span><span class="p">)</span>
+            <span class="k">with</span> <span class="n">h5py</span><span class="o">.</span><span class="n">File</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">path_data</span> <span class="o">+</span> <span class="bp">self</span><span class="o">.</span><span class="n">name_dataset</span> <span class="o">+</span> <span class="s2">&quot;.lf&quot;</span><span class="p">,</span> <span class="s1">&#39;r&#39;</span><span class="p">)</span> <span class="k">as</span> <span class="n">file_h5py</span><span class="p">:</span>
+                <span class="bp">self</span><span class="o">.</span><span class="n">list_classes</span> <span class="o">=</span> <span class="n">file_h5py</span><span class="p">[</span><span class="s1">&#39;list_patterns&#39;</span><span class="p">][()]</span>
+            <span class="n">logger</span><span class="o">.</span><span class="n">info</span><span class="p">(</span><span class="s2">&quot;Number of exemples for embeddings: &quot;</span> <span class="o">+</span> <span class="nb">str</span><span class="p">(</span><span class="nb">len</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">list_classes</span><span class="p">)))</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="k">assert</span> <span class="bp">self</span><span class="o">.</span><span class="n">list_classes</span> <span class="o">!=</span> <span class="p">[]</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">list_classes</span> <span class="o">=</span> <span class="n">list_classes</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">giant_str</span> <span class="o">=</span> <span class="s2">&quot;&quot;</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">train</span><span class="p">()</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">new_list_classes</span> <span class="o">=</span> <span class="p">[]</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">generate_list_embeddings</span><span class="p">()</span>
+
+<div class="viewcode-block" id="Embedding.train"><a class="viewcode-back" href="../../../docs/logsparser/doc.html#logflow.logsparser.Embedding.Embedding.train">[docs]</a>    <span class="k">def</span> <span class="nf">train</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;Train the word2vec model based on the list of patterns.</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="c1"># For writting the list_classes as a file.</span>
+        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">dir_tmp</span> <span class="o">!=</span> <span class="s2">&quot;&quot;</span><span class="p">:</span>
+            <span class="n">fp</span> <span class="o">=</span> <span class="n">tempfile</span><span class="o">.</span><span class="n">NamedTemporaryFile</span><span class="p">(</span><span class="n">mode</span><span class="o">=</span><span class="s2">&quot;w&quot;</span><span class="p">,</span> <span class="nb">dir</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">dir_tmp</span><span class="p">)</span>
+            <span class="n">fp_model</span> <span class="o">=</span> <span class="n">tempfile</span><span class="o">.</span><span class="n">NamedTemporaryFile</span><span class="p">(</span><span class="n">mode</span><span class="o">=</span><span class="s2">&quot;w&quot;</span><span class="p">,</span> <span class="nb">dir</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">dir_tmp</span><span class="p">)</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="n">fp</span> <span class="o">=</span> <span class="n">tempfile</span><span class="o">.</span><span class="n">NamedTemporaryFile</span><span class="p">(</span><span class="n">mode</span><span class="o">=</span><span class="s2">&quot;w&quot;</span><span class="p">)</span>
+            <span class="n">fp_model</span> <span class="o">=</span> <span class="n">tempfile</span><span class="o">.</span><span class="n">NamedTemporaryFile</span><span class="p">(</span><span class="n">mode</span><span class="o">=</span><span class="s2">&quot;w&quot;</span><span class="p">)</span>
+        <span class="n">logger</span><span class="o">.</span><span class="n">info</span><span class="p">(</span><span class="s2">&quot;Temporary files are created: &quot;</span> <span class="o">+</span> <span class="nb">str</span><span class="p">(</span><span class="n">fp_model</span><span class="o">.</span><span class="n">name</span><span class="p">)</span> <span class="o">+</span> <span class="s2">&quot; , &quot;</span> <span class="o">+</span> <span class="nb">str</span><span class="p">(</span><span class="n">fp</span><span class="o">.</span><span class="n">name</span><span class="p">))</span>
+        <span class="c1"># Merge the list_classes (list of int) into a string for the writting.</span>
+        <span class="n">nb_files_per_chunck</span> <span class="o">=</span> <span class="nb">int</span><span class="p">(</span><span class="nb">len</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">list_classes</span><span class="p">)</span> <span class="o">/</span> <span class="p">(</span><span class="n">os</span><span class="o">.</span><span class="n">cpu_count</span><span class="p">()</span> <span class="o">*</span> <span class="mi">8</span><span class="p">))</span>
+        <span class="k">if</span> <span class="n">nb_files_per_chunck</span> <span class="o">&lt;</span> <span class="mi">1</span><span class="p">:</span>
+            <span class="n">nb_files_per_chunck</span> <span class="o">=</span> <span class="mi">2</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">list_chunck</span> <span class="o">=</span> <span class="p">[</span><span class="bp">self</span><span class="o">.</span><span class="n">list_classes</span><span class="p">[</span><span class="n">i</span><span class="p">:</span><span class="n">i</span> <span class="o">+</span> <span class="n">nb_files_per_chunck</span><span class="p">]</span> <span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="mi">0</span><span class="p">,</span> <span class="nb">len</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">list_classes</span><span class="p">),</span> <span class="n">nb_files_per_chunck</span><span class="p">)]</span>
+        <span class="n">list_str_tmp</span> <span class="o">=</span> <span class="p">[]</span>
+        <span class="k">with</span> <span class="n">Pool</span><span class="p">(</span><span class="n">os</span><span class="o">.</span><span class="n">cpu_count</span><span class="p">())</span> <span class="k">as</span> <span class="n">mp</span><span class="p">:</span>
+            <span class="k">for</span> <span class="n">res</span> <span class="ow">in</span> <span class="n">tqdm</span><span class="p">(</span><span class="n">mp</span><span class="o">.</span><span class="n">imap</span><span class="p">(</span><span class="n">Embedding</span><span class="o">.</span><span class="n">list_to_str</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">list_chunck</span><span class="p">),</span> <span class="n">total</span><span class="o">=</span><span class="nb">len</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">list_chunck</span><span class="p">)):</span>
+                <span class="n">list_str_tmp</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">res</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">giant_str</span> <span class="o">=</span> <span class="s1">&#39; &#39;</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="n">e</span> <span class="k">for</span> <span class="n">e</span> <span class="ow">in</span> <span class="n">list_str_tmp</span><span class="p">)</span>
+        <span class="k">with</span> <span class="nb">open</span><span class="p">(</span><span class="n">fp</span><span class="o">.</span><span class="n">name</span><span class="p">,</span> <span class="s1">&#39;w&#39;</span><span class="p">)</span> <span class="k">as</span> <span class="n">f</span><span class="p">:</span>
+            <span class="n">f</span><span class="o">.</span><span class="n">write</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">giant_str</span><span class="p">)</span>
+        <span class="c1"># Start the learning</span>
+        <span class="n">logger</span><span class="o">.</span><span class="n">info</span><span class="p">(</span><span class="s2">&quot;Starting training w2v: &quot;</span> <span class="o">+</span> <span class="nb">str</span><span class="p">(</span><span class="n">os</span><span class="o">.</span><span class="n">cpu_count</span><span class="p">())</span> <span class="o">+</span> <span class="s2">&quot; threads&quot;</span><span class="p">)</span>
+        <span class="n">word2vec</span><span class="o">.</span><span class="n">word2vec</span><span class="p">(</span><span class="n">fp</span><span class="o">.</span><span class="n">name</span><span class="p">,</span> <span class="n">fp_model</span><span class="o">.</span><span class="n">name</span><span class="p">,</span> <span class="n">size</span><span class="o">=</span><span class="mi">20</span><span class="p">,</span>  <span class="n">verbose</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span> <span class="n">threads</span><span class="o">=</span><span class="n">os</span><span class="o">.</span><span class="n">cpu_count</span><span class="p">(),</span> <span class="n">binary</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
+        <span class="k">with</span> <span class="nb">open</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">path_model</span> <span class="o">+</span> <span class="bp">self</span><span class="o">.</span><span class="n">name_dataset</span> <span class="o">+</span> <span class="s2">&quot;_model.lf&quot;</span><span class="p">,</span> <span class="s2">&quot;rb&quot;</span><span class="p">)</span> <span class="k">as</span> <span class="n">input_file</span><span class="p">:</span>
+            <span class="n">dict_local</span> <span class="o">=</span> <span class="n">pickle</span><span class="o">.</span><span class="n">load</span><span class="p">(</span><span class="n">input_file</span><span class="p">)</span>
+        <span class="c1"># Save the model</span>
+        <span class="n">dict_local</span><span class="p">[</span><span class="s2">&quot;word2vec&quot;</span><span class="p">]</span> <span class="o">=</span> <span class="n">word2vec</span><span class="o">.</span><span class="n">load</span><span class="p">(</span><span class="n">fp_model</span><span class="o">.</span><span class="n">name</span><span class="p">,</span> <span class="n">kind</span><span class="o">=</span><span class="s2">&quot;bin&quot;</span><span class="p">)</span>
+        <span class="k">with</span> <span class="nb">open</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">path_model</span> <span class="o">+</span> <span class="bp">self</span><span class="o">.</span><span class="n">name_dataset</span> <span class="o">+</span> <span class="s2">&quot;_model.lf&quot;</span><span class="p">,</span> <span class="s2">&quot;wb&quot;</span><span class="p">)</span> <span class="k">as</span> <span class="n">output_file</span><span class="p">:</span>
+            <span class="n">pickle</span><span class="o">.</span><span class="n">dump</span><span class="p">(</span><span class="n">dict_local</span><span class="p">,</span> <span class="n">output_file</span><span class="p">)</span>
+        <span class="n">fp</span><span class="o">.</span><span class="n">close</span><span class="p">()</span>
+        <span class="n">fp_model</span><span class="o">.</span><span class="n">close</span><span class="p">()</span></div>
+
+<div class="viewcode-block" id="Embedding.generate_list_embeddings"><a class="viewcode-back" href="../../../docs/logsparser/doc.html#logflow.logsparser.Embedding.Embedding.generate_list_embeddings">[docs]</a>    <span class="k">def</span> <span class="nf">generate_list_embeddings</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;Filter the list of patterns according to the learned embeddings. The word2vec model requires at least a minimum of examples per word to be learned. We remove the words excluded of the word2vec learning.</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="k">with</span> <span class="nb">open</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">path_model</span> <span class="o">+</span> <span class="bp">self</span><span class="o">.</span><span class="n">name_dataset</span> <span class="o">+</span> <span class="s2">&quot;_model.lf&quot;</span><span class="p">,</span> <span class="s2">&quot;rb&quot;</span><span class="p">)</span> <span class="k">as</span> <span class="n">file_model</span><span class="p">:</span>
+            <span class="n">dict_model</span> <span class="o">=</span> <span class="n">pickle</span><span class="o">.</span><span class="n">load</span><span class="p">(</span><span class="n">file_model</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">w2v</span> <span class="o">=</span> <span class="n">dict_model</span><span class="p">[</span><span class="s2">&quot;word2vec&quot;</span><span class="p">]</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">dict_issue</span> <span class="o">=</span> <span class="p">{}</span>
+        <span class="k">try</span><span class="p">:</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">list_chunck</span>
+        <span class="k">except</span><span class="p">:</span>
+            <span class="n">nb_files_per_chunck</span> <span class="o">=</span> <span class="nb">int</span><span class="p">(</span><span class="nb">len</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">list_classes</span><span class="p">)</span> <span class="o">/</span> <span class="p">(</span><span class="n">os</span><span class="o">.</span><span class="n">cpu_count</span><span class="p">()</span> <span class="o">*</span> <span class="mi">2</span><span class="p">))</span>
+            <span class="k">if</span> <span class="n">nb_files_per_chunck</span> <span class="o">&lt;</span> <span class="mi">1</span><span class="p">:</span>
+                <span class="n">nb_files_per_chunck</span> <span class="o">=</span> <span class="mi">2</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">list_chunck</span> <span class="o">=</span> <span class="p">[</span><span class="bp">self</span><span class="o">.</span><span class="n">list_classes</span><span class="p">[</span><span class="n">i</span><span class="p">:</span><span class="n">i</span> <span class="o">+</span> <span class="n">nb_files_per_chunck</span><span class="p">]</span> <span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="mi">0</span><span class="p">,</span> <span class="nb">len</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">list_classes</span><span class="p">),</span> <span class="n">nb_files_per_chunck</span><span class="p">)]</span>
+        <span class="n">list_vocab</span> <span class="o">=</span> <span class="p">[]</span>
+        <span class="c1"># Build the list of vocab. If the word is not an integer, then it&#39;s not a valid ID. Remove it.</span>
+        <span class="k">for</span> <span class="n">word</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">w2v</span><span class="o">.</span><span class="n">vocab</span><span class="p">:</span>
+            <span class="k">try</span><span class="p">:</span>
+                <span class="nb">int</span><span class="p">(</span><span class="n">word</span><span class="p">)</span>
+                <span class="n">list_vocab</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="nb">int</span><span class="p">(</span><span class="n">word</span><span class="p">))</span>
+            <span class="k">except</span><span class="p">:</span>
+                <span class="k">pass</span>
+        <span class="n">new_list_classes</span> <span class="o">=</span> <span class="p">[]</span>
+        <span class="c1"># Keep only the learned words during the word2vec learning step.</span>
+        <span class="k">with</span> <span class="n">Pool</span><span class="p">(</span><span class="n">os</span><span class="o">.</span><span class="n">cpu_count</span><span class="p">())</span> <span class="k">as</span> <span class="n">mp</span><span class="p">:</span>
+            <span class="k">for</span> <span class="n">res</span> <span class="ow">in</span> <span class="n">tqdm</span><span class="p">(</span><span class="n">mp</span><span class="o">.</span><span class="n">imap</span><span class="p">(</span><span class="n">Embedding</span><span class="o">.</span><span class="n">clear_list</span><span class="p">,</span> <span class="nb">zip</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">list_chunck</span><span class="p">,</span> <span class="n">repeat</span><span class="p">(</span><span class="n">list_vocab</span><span class="p">))),</span> <span class="n">total</span><span class="o">=</span><span class="nb">len</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">list_chunck</span><span class="p">)):</span>
+                <span class="n">new_list_classes</span> <span class="o">+=</span> <span class="n">res</span><span class="o">.</span><span class="n">tolist</span><span class="p">()</span>
+        <span class="n">logger</span><span class="o">.</span><span class="n">info</span><span class="p">(</span><span class="nb">str</span><span class="p">(</span><span class="nb">len</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">list_classes</span><span class="p">)</span> <span class="o">-</span> <span class="nb">len</span><span class="p">(</span><span class="n">new_list_classes</span><span class="p">))</span> <span class="o">+</span>  <span class="s2">&quot; elements are removed due to not enought examples&quot;</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">list_classes</span> <span class="o">=</span> <span class="n">new_list_classes</span>
+        <span class="n">f</span> <span class="o">=</span> <span class="n">h5py</span><span class="o">.</span><span class="n">File</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">path_data</span> <span class="o">+</span> <span class="bp">self</span><span class="o">.</span><span class="n">name_dataset</span> <span class="o">+</span> <span class="s2">&quot;_embedding.lf&quot;</span><span class="p">,</span> <span class="s2">&quot;w&quot;</span><span class="p">)</span>
+        <span class="n">f</span><span class="o">.</span><span class="n">create_dataset</span><span class="p">(</span><span class="s1">&#39;list_classes&#39;</span><span class="p">,</span> <span class="n">data</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">list_classes</span><span class="p">)</span>
+        <span class="n">f</span><span class="o">.</span><span class="n">close</span><span class="p">()</span></div>
+
+<div class="viewcode-block" id="Embedding.list_to_str"><a class="viewcode-back" href="../../../docs/logsparser/doc.html#logflow.logsparser.Embedding.Embedding.list_to_str">[docs]</a>    <span class="nd">@staticmethod</span>
+    <span class="k">def</span> <span class="nf">list_to_str</span><span class="p">(</span><span class="n">list_str</span> <span class="p">:</span> <span class="n">List</span><span class="p">[</span><span class="nb">str</span><span class="p">])</span> <span class="o">-&gt;</span> <span class="nb">str</span><span class="p">:</span>
+        <span class="sd">&quot;&quot;&quot;Merge a list of integer into a string.</span>
+
+<span class="sd">        Args:</span>
+<span class="sd">            list_str (list): list of integer</span>
+
+<span class="sd">        Returns:</span>
+<span class="sd">            str: string representation</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="k">return</span> <span class="s1">&#39; &#39;</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="nb">str</span><span class="p">(</span><span class="n">e</span><span class="p">)</span> <span class="k">for</span> <span class="n">e</span> <span class="ow">in</span> <span class="n">list_str</span><span class="p">)</span></div>
+
+<div class="viewcode-block" id="Embedding.clear_list"><a class="viewcode-back" href="../../../docs/logsparser/doc.html#logflow.logsparser.Embedding.Embedding.clear_list">[docs]</a>    <span class="nd">@staticmethod</span>
+    <span class="k">def</span> <span class="nf">clear_list</span><span class="p">(</span><span class="n">args</span><span class="p">:</span> <span class="n">Tuple</span><span class="p">[</span><span class="n">List</span><span class="p">[</span><span class="nb">int</span><span class="p">],</span> <span class="n">List</span><span class="p">[</span><span class="nb">int</span><span class="p">]])</span> <span class="o">-&gt;</span> <span class="nb">list</span><span class="p">:</span>
+        <span class="sd">&quot;&quot;&quot;Keep only the words from the list of vocab in the list of patterns.</span>
+
+<span class="sd">        Args:</span>
+<span class="sd">            args ((list, list)): The first argument is the list of patterns. The second is the list of vocab.</span>
+
+<span class="sd">        Returns:</span>
+<span class="sd">            list: list of patterns with only the words into the list of vocab. </span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="n">list_int</span><span class="p">,</span> <span class="n">list_vocab</span> <span class="o">=</span> <span class="n">args</span>
+        <span class="k">return</span> <span class="n">np</span><span class="o">.</span><span class="n">delete</span><span class="p">(</span><span class="n">list_int</span><span class="p">,</span> <span class="n">np</span><span class="o">.</span><span class="n">where</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">isin</span><span class="p">(</span><span class="n">list_int</span><span class="p">,</span> <span class="n">list_vocab</span><span class="p">,</span> <span class="n">invert</span><span class="o">=</span><span class="kc">True</span><span class="p">))[</span><span class="mi">0</span><span class="p">])</span></div></div>
+
+</pre></div>
+
+          </div>
+        </div>
+      </div>
+      <div class="sphinxsidebar" role="navigation" aria-label="main navigation">
+        <div class="sphinxsidebarwrapper"><div class="relations">
+<h3>Related Topics</h3>
+<ul>
+  <li><a href="../../../index.html">Documentation overview</a><ul>
+  <li><a href="../../index.html">Module code</a><ul>
+  </ul></li>
+  </ul></li>
+</ul>
+</div>
+<div id="searchbox" style="display: none" role="search">
+  <h3>Quick search</h3>
+    <form class="search" action="../../../search.html" method="get">
+      <div><input type="text" name="q" /></div>
+      <div><input type="submit" value="Go" /></div>
+      <input type="hidden" name="check_keywords" value="yes" />
+      <input type="hidden" name="area" value="default" />
+    </form>
+</div>
+<script type="text/javascript">$('#searchbox').show(0);</script>
+        </div>
+      </div>
+      <div class="clearer"></div>
+    </div>
+    <div class="footer">
+      &copy;2020, Marc Platini.
+      
+      |
+      Powered by <a href="http://sphinx-doc.org/">Sphinx 1.6.7</a>
+      &amp; <a href="https://github.com/bitprophet/alabaster">Alabaster 0.7.8</a>
+      
+    </div>
+
+    
+
+    
+  </body>
+</html>

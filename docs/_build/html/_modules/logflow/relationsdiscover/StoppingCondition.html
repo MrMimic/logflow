@@ -1,0 +1,136 @@
+
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN"
+  "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+
+<html xmlns="http://www.w3.org/1999/xhtml">
+  <head>
+    <meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
+    <title>logflow.relationsdiscover.StoppingCondition &#8212; LogFlow 0.1 documentation</title>
+    <link rel="stylesheet" href="../../../_static/alabaster.css" type="text/css" />
+    <link rel="stylesheet" href="../../../_static/pygments.css" type="text/css" />
+    <script type="text/javascript">
+      var DOCUMENTATION_OPTIONS = {
+        URL_ROOT:    '../../../',
+        VERSION:     '0.1',
+        COLLAPSE_INDEX: false,
+        FILE_SUFFIX: '.html',
+        HAS_SOURCE:  true,
+        SOURCELINK_SUFFIX: '.txt'
+      };
+    </script>
+    <script type="text/javascript" src="../../../_static/jquery.js"></script>
+    <script type="text/javascript" src="../../../_static/underscore.js"></script>
+    <script type="text/javascript" src="../../../_static/doctools.js"></script>
+    <link rel="index" title="Index" href="../../../genindex.html" />
+    <link rel="search" title="Search" href="../../../search.html" />
+   
+  <link rel="stylesheet" href="../../../_static/custom.css" type="text/css" />
+  
+  <meta name="viewport" content="width=device-width, initial-scale=0.9, maximum-scale=0.9" />
+
+  </head>
+  <body>
+  
+
+    <div class="document">
+      <div class="documentwrapper">
+        <div class="bodywrapper">
+          <div class="body" role="main">
+            
+  <h1>Source code for logflow.relationsdiscover.StoppingCondition</h1><div class="highlight"><pre>
+<div class="viewcode-block" id="StoppingCondition"><a class="viewcode-back" href="../../../docs/relationsdiscover/doc.html#logflow.relationsdiscover.StoppingCondition.StoppingCondition">[docs]</a><span></span><span class="k">class</span> <span class="nc">StoppingCondition</span><span class="p">:</span>
+    <span class="sd">&quot;&quot;&quot;Condition to stop the learning. Increase of the F1 value needs to be less than 0.005 during more than 3 steps to stop the learning process.</span>
+
+<span class="sd">    Args:</span>
+<span class="sd">        method (str, optional): Not implemented yet. Defaults to &quot;earlystopping&quot;.</span>
+<span class="sd">        condition_value (float, optional): value of the increase. Defaults to 0.005.</span>
+<span class="sd">        condition_step (int, optional): number of steps. Defaults to 3.</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="k">def</span> <span class="nf">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">method</span><span class="o">=</span><span class="s2">&quot;earlystopping&quot;</span><span class="p">,</span> <span class="n">condition_value</span> <span class="o">=</span> <span class="mf">0.005</span><span class="p">,</span> <span class="n">condition_step</span><span class="o">=</span><span class="mi">3</span><span class="p">):</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">method</span> <span class="o">=</span> <span class="n">method</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">metric_value</span> <span class="o">=</span> <span class="mi">0</span>
+        <span class="k">if</span> <span class="n">method</span> <span class="o">==</span> <span class="s2">&quot;earlystopping&quot;</span><span class="p">:</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">condition_value</span> <span class="o">=</span> <span class="n">condition_value</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">condition_step</span> <span class="o">=</span> <span class="n">condition_step</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">nb_step</span> <span class="o">=</span> <span class="mi">0</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">stopped</span> <span class="o">=</span> <span class="kc">False</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">last_increased</span> <span class="o">=</span> <span class="o">-</span><span class="mi">1</span>
+
+<div class="viewcode-block" id="StoppingCondition.stop"><a class="viewcode-back" href="../../../docs/relationsdiscover/doc.html#logflow.relationsdiscover.StoppingCondition.StoppingCondition.stop">[docs]</a>    <span class="k">def</span> <span class="nf">stop</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">bool</span><span class="p">:</span>
+        <span class="sd">&quot;&quot;&quot;Compute the condition</span>
+
+<span class="sd">        Returns:</span>
+<span class="sd">            bool: If the stopping condition is reached return True, else return False</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">nb_step</span> <span class="o">==</span> <span class="bp">self</span><span class="o">.</span><span class="n">condition_step</span><span class="p">:</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">stopped</span> <span class="o">=</span> <span class="kc">True</span>
+            <span class="k">return</span> <span class="kc">True</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="k">return</span> <span class="kc">False</span></div>
+
+<div class="viewcode-block" id="StoppingCondition.update"><a class="viewcode-back" href="../../../docs/relationsdiscover/doc.html#logflow.relationsdiscover.StoppingCondition.StoppingCondition.update">[docs]</a>    <span class="k">def</span> <span class="nf">update</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">metric</span> <span class="p">:</span> <span class="nb">int</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;Update the new value of the metric and compute the number of increase steps.</span>
+
+<span class="sd">        Args:</span>
+<span class="sd">            metric (int): value of the metric</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="k">if</span> <span class="n">metric</span> <span class="o">-</span> <span class="bp">self</span><span class="o">.</span><span class="n">metric_value</span> <span class="o">&lt;</span> <span class="bp">self</span><span class="o">.</span><span class="n">condition_value</span><span class="p">:</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">nb_step</span> <span class="o">+=</span> <span class="mi">1</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">nb_step</span> <span class="o">=</span> <span class="mi">0</span> 
+        <span class="bp">self</span><span class="o">.</span><span class="n">last_increased</span> <span class="o">=</span> <span class="n">metric</span> <span class="o">-</span> <span class="bp">self</span><span class="o">.</span><span class="n">metric_value</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">metric_value</span> <span class="o">=</span> <span class="n">metric</span></div>
+
+    <span class="k">def</span> <span class="nf">__str__</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">str</span><span class="p">:</span>
+        <span class="sd">&quot;&quot;&quot;Return the string representation of the condition</span>
+
+<span class="sd">        Returns:</span>
+<span class="sd">            str: string representation</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">stopped</span><span class="p">:</span>
+            <span class="k">return</span> <span class="s2">&quot;Condition is reached, last increase is: &quot;</span> <span class="o">+</span> <span class="nb">str</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">last_increased</span><span class="p">)</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="k">return</span> <span class="s2">&quot;Condition is not reached, last increase is: &quot;</span> <span class="o">+</span> <span class="nb">str</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">last_increased</span><span class="p">)</span> <span class="o">+</span> <span class="s2">&quot; number of steps: &quot;</span> <span class="o">+</span> <span class="nb">str</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">nb_step</span><span class="p">)</span></div>
+</pre></div>
+
+          </div>
+        </div>
+      </div>
+      <div class="sphinxsidebar" role="navigation" aria-label="main navigation">
+        <div class="sphinxsidebarwrapper"><div class="relations">
+<h3>Related Topics</h3>
+<ul>
+  <li><a href="../../../index.html">Documentation overview</a><ul>
+  <li><a href="../../index.html">Module code</a><ul>
+  </ul></li>
+  </ul></li>
+</ul>
+</div>
+<div id="searchbox" style="display: none" role="search">
+  <h3>Quick search</h3>
+    <form class="search" action="../../../search.html" method="get">
+      <div><input type="text" name="q" /></div>
+      <div><input type="submit" value="Go" /></div>
+      <input type="hidden" name="check_keywords" value="yes" />
+      <input type="hidden" name="area" value="default" />
+    </form>
+</div>
+<script type="text/javascript">$('#searchbox').show(0);</script>
+        </div>
+      </div>
+      <div class="clearer"></div>
+    </div>
+    <div class="footer">
+      &copy;2020, Marc Platini.
+      
+      |
+      Powered by <a href="http://sphinx-doc.org/">Sphinx 1.6.7</a>
+      &amp; <a href="https://github.com/bitprophet/alabaster">Alabaster 0.7.8</a>
+      
+    </div>
+
+    
+
+    
+  </body>
+</html>

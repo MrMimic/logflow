@@ -1,0 +1,168 @@
+
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN"
+  "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+
+<html xmlns="http://www.w3.org/1999/xhtml">
+  <head>
+    <meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
+    <title>logflow.relationsdiscover.Dataset &#8212; LogFlow 0.1 documentation</title>
+    <link rel="stylesheet" href="../../../_static/alabaster.css" type="text/css" />
+    <link rel="stylesheet" href="../../../_static/pygments.css" type="text/css" />
+    <script type="text/javascript">
+      var DOCUMENTATION_OPTIONS = {
+        URL_ROOT:    '../../../',
+        VERSION:     '0.1',
+        COLLAPSE_INDEX: false,
+        FILE_SUFFIX: '.html',
+        HAS_SOURCE:  true,
+        SOURCELINK_SUFFIX: '.txt'
+      };
+    </script>
+    <script type="text/javascript" src="../../../_static/jquery.js"></script>
+    <script type="text/javascript" src="../../../_static/underscore.js"></script>
+    <script type="text/javascript" src="../../../_static/doctools.js"></script>
+    <link rel="index" title="Index" href="../../../genindex.html" />
+    <link rel="search" title="Search" href="../../../search.html" />
+   
+  <link rel="stylesheet" href="../../../_static/custom.css" type="text/css" />
+  
+  <meta name="viewport" content="width=device-width, initial-scale=0.9, maximum-scale=0.9" />
+
+  </head>
+  <body>
+  
+
+    <div class="document">
+      <div class="documentwrapper">
+        <div class="bodywrapper">
+          <div class="body" role="main">
+            
+  <h1>Source code for logflow.relationsdiscover.Dataset</h1><div class="highlight"><pre>
+<span></span>
+<span class="kn">import</span> <span class="nn">warnings</span>
+<span class="n">warnings</span><span class="o">.</span><span class="n">filterwarnings</span><span class="p">(</span><span class="s2">&quot;ignore&quot;</span><span class="p">,</span> <span class="n">category</span><span class="o">=</span><span class="ne">FutureWarning</span><span class="p">)</span>
+<span class="kn">import</span> <span class="nn">word2vec</span> <span class="c1"># type: ignore</span>
+<span class="kn">import</span> <span class="nn">h5py</span> <span class="c1"># type: ignore</span>
+<span class="kn">from</span> <span class="nn">collections</span> <span class="k">import</span> <span class="n">Counter</span>
+<span class="kn">from</span> <span class="nn">loguru</span> <span class="k">import</span> <span class="n">logger</span>
+<span class="kn">import</span> <span class="nn">os</span>
+<span class="kn">import</span> <span class="nn">time</span>
+<span class="kn">from</span> <span class="nn">multiprocessing</span> <span class="k">import</span> <span class="n">Pool</span>
+<span class="kn">from</span> <span class="nn">tqdm</span> <span class="k">import</span> <span class="n">tqdm</span> <span class="c1"># type: ignore</span>
+<span class="kn">from</span> <span class="nn">logflow.relationsdiscover.Cardinality</span> <span class="k">import</span> <span class="n">Cardinality</span>
+<span class="kn">import</span> <span class="nn">pickle</span> 
+<span class="kn">from</span> <span class="nn">typing</span> <span class="k">import</span> <span class="n">List</span>
+
+<div class="viewcode-block" id="Dataset"><a class="viewcode-back" href="../../../docs/relationsdiscover/doc.html#logflow.relationsdiscover.Dataset.Dataset">[docs]</a><span class="k">class</span> <span class="nc">Dataset</span><span class="p">:</span>
+    <span class="sd">&quot;&quot;&quot;Load the files and create the cardinalities</span>
+
+<span class="sd">    Args:</span>
+<span class="sd">        path_model (str, optional): path to the word2vec model. Defaults to &quot;&quot;.</span>
+<span class="sd">        path_data (str, optional): path to the data (list of patterns). Defaults to &quot;&quot;.</span>
+<span class="sd">        name_dataset (str, optional): name of the dataset to load. Defaults to &quot;&quot;.</span>
+<span class="sd">        size (int, optional): number of examples to load. Defaults to -1.</span>
+
+<span class="sd">    Raises:</span>
+<span class="sd">        Exception: model file is not found</span>
+<span class="sd">        Exception: data file is not found</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+
+    <span class="k">def</span> <span class="nf">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">path_model</span><span class="o">=</span><span class="s2">&quot;&quot;</span><span class="p">,</span> <span class="n">path_data</span><span class="o">=</span><span class="s2">&quot;&quot;</span><span class="p">,</span> <span class="n">name_dataset</span><span class="o">=</span><span class="s2">&quot;&quot;</span><span class="p">,</span> <span class="n">size</span><span class="o">=-</span><span class="mi">1</span><span class="p">):</span>
+        <span class="k">assert</span> <span class="n">path_model</span> <span class="o">!=</span> <span class="s2">&quot;&quot;</span>
+        <span class="k">assert</span> <span class="n">path_data</span> <span class="o">!=</span> <span class="s2">&quot;&quot;</span>
+        <span class="k">assert</span> <span class="n">name_dataset</span> <span class="o">!=</span> <span class="s2">&quot;&quot;</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">path_model</span> <span class="o">=</span> <span class="n">path_model</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">path_data</span> <span class="o">=</span> <span class="n">path_data</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">name_dataset</span> <span class="o">=</span> <span class="n">name_dataset</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">path_model_w2v</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">path_model</span> <span class="o">+</span> <span class="bp">self</span><span class="o">.</span><span class="n">name_dataset</span> <span class="o">+</span><span class="s2">&quot;_model.lf&quot;</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">path_list_classes</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">path_data</span> <span class="o">+</span> <span class="bp">self</span><span class="o">.</span><span class="n">name_dataset</span> <span class="o">+</span> <span class="s2">&quot;_embedding.lf&quot;</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">size</span> <span class="o">=</span> <span class="n">size</span>
+        <span class="k">if</span> <span class="ow">not</span> <span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">isfile</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">path_model_w2v</span><span class="p">):</span>
+            <span class="k">raise</span> <span class="ne">Exception</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">path_model_w2v</span> <span class="o">+</span> <span class="s2">&quot; is not a file&quot;</span><span class="p">)</span>
+        <span class="k">if</span> <span class="ow">not</span> <span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">isfile</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">path_list_classes</span><span class="p">):</span>
+            <span class="k">raise</span> <span class="ne">Exception</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">path_list_classes</span> <span class="o">+</span> <span class="s2">&quot; is not a file&quot;</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">list_cardinalities</span> <span class="o">=</span> <span class="p">[]</span>
+
+<div class="viewcode-block" id="Dataset.loading_files"><a class="viewcode-back" href="../../../docs/relationsdiscover/doc.html#logflow.relationsdiscover.Dataset.Dataset.loading_files">[docs]</a>    <span class="k">def</span> <span class="nf">loading_files</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;Load the data, the word2vec and the counter file.</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="n">logger</span><span class="o">.</span><span class="n">info</span><span class="p">(</span><span class="s2">&quot;Loading word2vec model: &quot;</span> <span class="o">+</span> <span class="bp">self</span><span class="o">.</span><span class="n">path_model_w2v</span><span class="p">)</span>
+        <span class="k">with</span> <span class="nb">open</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">path_model_w2v</span><span class="p">,</span> <span class="s2">&quot;rb&quot;</span><span class="p">)</span> <span class="k">as</span> <span class="n">file_model</span><span class="p">:</span>
+            <span class="n">dict_local</span> <span class="o">=</span> <span class="n">pickle</span><span class="o">.</span><span class="n">load</span><span class="p">(</span><span class="n">file_model</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">w2v</span> <span class="o">=</span> <span class="n">dict_local</span><span class="p">[</span><span class="s2">&quot;word2vec&quot;</span><span class="p">]</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">counter</span> <span class="o">=</span> <span class="n">dict_local</span><span class="p">[</span><span class="s2">&quot;counter_patterns&quot;</span><span class="p">]</span>
+        <span class="n">logger</span><span class="o">.</span><span class="n">info</span><span class="p">(</span><span class="s2">&quot;Loading list of classes: &quot;</span> <span class="o">+</span> <span class="bp">self</span><span class="o">.</span><span class="n">path_list_classes</span><span class="p">)</span>
+        <span class="k">with</span> <span class="n">h5py</span><span class="o">.</span><span class="n">File</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">path_list_classes</span><span class="p">,</span> <span class="s1">&#39;r&#39;</span><span class="p">)</span> <span class="k">as</span> <span class="n">file_h5py</span><span class="p">:</span>
+            <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">size</span> <span class="o">!=</span> <span class="o">-</span><span class="mi">1</span><span class="p">:</span>
+                <span class="bp">self</span><span class="o">.</span><span class="n">list_classes</span> <span class="o">=</span> <span class="n">file_h5py</span><span class="p">[</span><span class="s1">&#39;list_classes&#39;</span><span class="p">][:</span><span class="bp">self</span><span class="o">.</span><span class="n">size</span><span class="p">]</span>
+            <span class="k">else</span><span class="p">:</span>
+                <span class="bp">self</span><span class="o">.</span><span class="n">list_classes</span> <span class="o">=</span> <span class="n">file_h5py</span><span class="p">[</span><span class="s1">&#39;list_classes&#39;</span><span class="p">][()]</span></div>
+            
+<div class="viewcode-block" id="Dataset.creating_cardinalities"><a class="viewcode-back" href="../../../docs/relationsdiscover/doc.html#logflow.relationsdiscover.Dataset.Dataset.creating_cardinalities">[docs]</a>    <span class="k">def</span> <span class="nf">creating_cardinalities</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">min_cardinality</span><span class="o">=</span><span class="mi">0</span><span class="p">,</span> <span class="n">max_cardinality</span><span class="o">=</span><span class="nb">float</span><span class="p">(</span><span class="s2">&quot;+inf&quot;</span><span class="p">)):</span>
+        <span class="sd">&quot;&quot;&quot;Create the cardinality object for the learning step.</span>
+
+<span class="sd">        Args:</span>
+<span class="sd">            min_cardinality (int, optional): minimum value of cardinality to be selected. Defaults to 0.</span>
+<span class="sd">            max_cardinality (float, optional): maximum value of cardinality to be selected. Defaults to float(&quot;+inf&quot;).</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="n">list_cardinalities_available</span> <span class="o">=</span> <span class="p">[]</span>
+        <span class="k">for</span> <span class="n">event</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">counter</span><span class="p">:</span>
+            <span class="n">list_cardinalities_available</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="nb">len</span><span class="p">(</span><span class="nb">str</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">counter</span><span class="p">[</span><span class="n">event</span><span class="p">])))</span>
+        <span class="n">set_cardinalities_available</span> <span class="o">=</span> <span class="nb">set</span><span class="p">(</span><span class="n">list_cardinalities_available</span><span class="p">)</span>
+        <span class="n">logger</span><span class="o">.</span><span class="n">info</span><span class="p">(</span><span class="nb">str</span><span class="p">(</span><span class="nb">len</span><span class="p">(</span><span class="n">set_cardinalities_available</span><span class="p">))</span> <span class="o">+</span> <span class="s2">&quot; cardinalities available in this dataset&quot;</span><span class="p">)</span>
+        <span class="k">for</span> <span class="n">cardinality</span> <span class="ow">in</span> <span class="n">set_cardinalities_available</span><span class="p">:</span>
+            <span class="k">if</span> <span class="n">cardinality</span> <span class="o">&gt;</span> <span class="n">min_cardinality</span> <span class="ow">and</span> <span class="n">cardinality</span> <span class="o">&lt;</span> <span class="n">max_cardinality</span><span class="p">:</span>
+                <span class="bp">self</span><span class="o">.</span><span class="n">list_cardinalities</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">Cardinality</span><span class="p">(</span><span class="n">cardinality</span><span class="o">=</span><span class="n">cardinality</span><span class="p">,</span> <span class="n">path_w2v</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">path_model_w2v</span><span class="p">,</span> <span class="n">path_list_classes</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">path_list_classes</span><span class="p">,</span> <span class="n">size</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">size</span><span class="p">))</span></div>
+        
+<div class="viewcode-block" id="Dataset.run"><a class="viewcode-back" href="../../../docs/relationsdiscover/doc.html#logflow.relationsdiscover.Dataset.Dataset.run">[docs]</a>    <span class="k">def</span> <span class="nf">run</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">List</span><span class="p">[</span><span class="n">Cardinality</span><span class="p">]:</span>
+        <span class="sd">&quot;&quot;&quot;Start the workflow for the multithreading implementation</span>
+
+<span class="sd">        Returns:</span>
+<span class="sd">            List[Cardinality]: list of the cardinalities created</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">loading_files</span><span class="p">()</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">creating_cardinalities</span><span class="p">()</span>
+        <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">list_cardinalities</span></div></div>
+</pre></div>
+
+          </div>
+        </div>
+      </div>
+      <div class="sphinxsidebar" role="navigation" aria-label="main navigation">
+        <div class="sphinxsidebarwrapper"><div class="relations">
+<h3>Related Topics</h3>
+<ul>
+  <li><a href="../../../index.html">Documentation overview</a><ul>
+  <li><a href="../../index.html">Module code</a><ul>
+  </ul></li>
+  </ul></li>
+</ul>
+</div>
+<div id="searchbox" style="display: none" role="search">
+  <h3>Quick search</h3>
+    <form class="search" action="../../../search.html" method="get">
+      <div><input type="text" name="q" /></div>
+      <div><input type="submit" value="Go" /></div>
+      <input type="hidden" name="check_keywords" value="yes" />
+      <input type="hidden" name="area" value="default" />
+    </form>
+</div>
+<script type="text/javascript">$('#searchbox').show(0);</script>
+        </div>
+      </div>
+      <div class="clearer"></div>
+    </div>
+    <div class="footer">
+      &copy;2020, Marc Platini.
+      
+      |
+      Powered by <a href="http://sphinx-doc.org/">Sphinx 1.6.7</a>
+      &amp; <a href="https://github.com/bitprophet/alabaster">Alabaster 0.7.8</a>
+      
+    </div>
+
+    
+
+    
+  </body>
+</html>
