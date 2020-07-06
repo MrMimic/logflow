@@ -6,6 +6,9 @@ jobs:
   docs:
     runs-on: ubuntu-latest
     steps:
+    - name: Install dependencies
+      run: |
+          apt-get update -qq && apt-get install -y -qq cython gcc
     - uses: actions/checkout@v1
     - uses: ammaraskar/sphinx-action@master
       with:
