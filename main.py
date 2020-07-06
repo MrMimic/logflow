@@ -15,10 +15,17 @@ from logflow.treebuilding.Workflow import Workflow
 from os import listdir
 from os.path import isfile
 
-
 def parser_function(line):
-    message_split = line.strip().split()
-    return message_split[4:]
+    return line.strip().split()[4:]
+
+def split_function(line):
+    try:
+        return line.strip().split()[3]
+    except:
+        return "1"
+
+def sort_function(list_lines):
+    return sorted(list_lines, key=lambda line: split_function(line))
 
 if __name__== "__main__":
     path_logs = "data/Windows/"
@@ -28,10 +35,10 @@ if __name__== "__main__":
             list_files.append(path_logs + "/" + file)
 
     # Find the patterns
-    # dataset = Dataset(list_files=list_files, parser_function=parser_function)
-    # patterns = Parser(dataset).detect_pattern()
-    # Dataset(list_files=list_files, dict_patterns=patterns, saving=True, path_data="data/", name_dataset="Test", path_model="model/", parser_function=parser_function)
-    # Embedding(loading=True, name_dataset="Test", path_data="data/", path_model="model/").start()
+    dataset = Dataset(list_files=list_files, parser_function=parser_function)
+    patterns = Parser(dataset).detect_pattern()
+    Dataset(list_files=list_files, dict_patterns=patterns, saving=True, path_data="data/", name_dataset="Test", path_model="model/", parser_function=parser_function, sort_function=sort_function)
+    Embedding(loading=True, name_dataset="Test", path_data="data/", path_model="model/").start()
 
     # Learn the correlations
     # size =  100000000 

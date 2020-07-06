@@ -168,7 +168,7 @@ That's it.
 *cardinalities_choosen* is the cardinalities used for the learning. Other cardinalities are excluded.
 
 ## Documentation
-link
+https://logflow.readthedocs.io/en/latest/
 
 ## Contact
 marc.platini@gmail.com
