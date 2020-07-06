@@ -13,7 +13,7 @@ RUN apt-get update && DEBIAN_FRONTEND="noninteractive" apt-get install -y --no-i
 	 python3-distutils \
 	 nano \
 	 htop \
-      python3-sphinx \
+         python3-sphinx \
 	 iotop && \
      rm -rf /var/lib/apt/lists/*
 

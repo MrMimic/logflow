@@ -9,11 +9,13 @@ jobs:
       run: |
           apt-get update -qq && apt-get install -y -qq cython
           pip3 install sphinx-rtd-theme
-    - uses: actions/checkout@v1
-    - uses: ammaraskar/sphinx-action@master
-      with:
-        docs-folder: "docs/"
-    - uses: actions/upload-artifact@v1
-      with:
-        name: DocumentationHTML
-        path: docs/_build/html/
+    - name: Building docs
+      run: sphinx-build -b html ./docs/ ./docs/_build/html
+    # - uses: actions/checkout@v1
+    # - uses: ammaraskar/sphinx-action@master
+    #   with:
+    #     docs-folder: "docs/"
+    # - uses: actions/upload-artifact@v1
+    #   with:
+    #     name: DocumentationHTML
+    #     path: docs/_build/html/
