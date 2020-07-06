@@ -1,5 +1,6 @@
 [![Inline docs](https://img.shields.io/badge/license-GPL-success)](https://www.gnu.org/licenses/gpl-3.0.en.html)
 [![Workflow status](https://github.com/bds-ailab/logflow/workflows/Python_tests/badge.svg)](https://github.com/bds-ailab/logflow/actions?query=workflow%3APython_tests)
+[![Doc status](https://github.com/bds-ailab/logflow/workflows/Docs/badge.svg)](https://github.com/bds-ailab/logflow/actions?query=workflow%3ADocs)
 [![Quality Gate Status](https://sonarcloud.io/api/project_badges/measure?project=bds-ailab_logflow&metric=alert_status)](https://sonarcloud.io/dashboard?id=bds-ailab_logflow)
 [![Lines of Code](https://sonarcloud.io/api/project_badges/measure?project=bds-ailab_logflow&metric=ncloc)](https://sonarcloud.io/dashboard?id=bds-ailab_logflow)
 [![Bugs](https://sonarcloud.io/api/project_badges/measure?project=bds-ailab_logflow&metric=bugs)](https://sonarcloud.io/dashboard?id=bds-ailab_logflow)
