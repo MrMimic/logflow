@@ -3,13 +3,23 @@ name: Docs
 on: [push]
 
 jobs:
-  docs:
+  build-and-delpoy:
+    name: Build
     runs-on: ubuntu-latest
     steps:
-    - name: Install dependencies
-      run: |
-          apt-get update -qq && apt-get install -y -qq cython gcc
-    - uses: actions/checkout@v1
-    - uses: ammaraskar/sphinx-action@master
-      with:
-        docs-folder: "docs/"
+      # https://github.com/marketplace/actions/checkout
+      - uses: actions/checkout@v2
+      # https://github.com/marketplace/actions/setup-python
+      # ^-- This gives info on matrix testing.
+      - name: Install Python
+        uses: actions/setup-python@v2
+        with:
+          python-version: 3.6
+      # I don't know where the "run" thing is documented.
+      - name: Install dependencies
+        run: |
+          pip install -r requirements.txt
+      - name: Build Sphinx docs
+        run: |
+          sphinx-build -b html ./docs/ ./docs/_build/html
+          make html
