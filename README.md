@@ -120,9 +120,18 @@ First, we need to define the function to get the message part of one line of log
 
 ```python
 def parser_function(line):
-    message_split = line.strip().split()
-    return message_split[4:]
+    return line.strip().split()[4:]
 ```
+
+Additionally, if we want to sort the logs according to a field, we can use a specific function
+```python
+def split_function(line):
+    try:
+        return line.strip().split()[3]
+    except:
+        return "1"
+```
+
 
 We can start with the first module: the logparsing tool.
 
@@ -136,7 +145,7 @@ for file in listdir(path_logs):
 
 dataset = Dataset(list_files=list_files, parser_function=parser_function) # Generate your data
 patterns = Parser(dataset).detect_pattern() # Detect patterns
-Dataset(list_files=list_files, dict_patterns=patterns, saving=True, path_data="data/", name_dataset="Windows_test", path_model="model/", parser_function=parser_function) # Apply the detected patterns to the data
+Dataset(list_files=list_files, dict_patterns=patterns, saving=True, path_data="data/", name_dataset="Windows_test", path_model="model/", parser_function=parser_function, sort_function=sort_function) # Apply the detected patterns to the data
 Embedding(loading=True, name_dataset="Windows_test", path_data="data/", path_model="model/").start() # Generate embedding for the LSTM
 ```
 
@@ -147,6 +156,15 @@ list_cardinalities = Dataset_learning(path_model="model/", path_data="data/", na
 worker = Worker(cardinalities_choosen=[4,5,6,7], list_cardinalities=list_cardinalities, path_model="model/", name_dataset="Windows_test") # Create the worker
 worker.train() # Start learning the correlations
 ```
+
+Additionally, we can have the merged results to compare our results.
+
+```python
+results = Results(path_model="model/", name_model="Windows_test")
+results.load_files()
+results.compute_results(condition="Test")
+results.print_results()
+```  
 
 At the end, we can get the correlations tree.
 

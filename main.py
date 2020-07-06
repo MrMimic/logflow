@@ -41,16 +41,16 @@ if __name__== "__main__":
     Embedding(loading=True, name_dataset="Test", path_data="data/", path_model="model/").start()
 
     # Learn the correlations
-    # size =  100000000 
-    # list_cardinalities = Dataset_learning(path_model="model/", path_data="data/", name_dataset="Test", size=size).run()
-    # worker = Worker(cardinalities_choosen=[4,5,6,7], list_cardinalities=list_cardinalities, path_model="model/", name_dataset="Test")
-    # worker.train()
+    size =  100000000 
+    list_cardinalities = Dataset_learning(path_model="model/", path_data="data/", name_dataset="Test", size=size).run()
+    worker = Worker(cardinalities_choosen=[4,5,6,7], list_cardinalities=list_cardinalities, path_model="model/", name_dataset="Test")
+    worker.train()
 
     # Show the results
-    # results = Results(path_model="model/", name_model="Test")
-    # results.load_files()
-    # results.compute_results(condition="Test")
-    # results.print_results()
+    results = Results(path_model="model/", name_model="Test")
+    results.load_files()
+    results.compute_results(condition="Test")
+    results.print_results()
     
     # Get the tree
     dataset = Dataset_building(path_model="model/", name_model="Test", path_data="data/Windows/Windows.log", index_line_max=30000, parser_function=parser_function)
