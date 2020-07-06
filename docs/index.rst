@@ -17,8 +17,6 @@ Indices and tables
    :maxdepth: 2
    :caption: Contents:
 
-   usage/installation
-   usage/quickstart
    docs/logsparser/doc
    docs/relationsdiscover/doc
    docs/treebuilding/doc
