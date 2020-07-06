@@ -18,6 +18,7 @@ jobs:
       # I don't know where the "run" thing is documented.
       - name: Install dependencies
         run: |
+          apt-get update -qq && apt-get install -y -qq sphinx-build
           pip install -r docs/requirements.txt
       - name: Build Sphinx docs
         run: |
