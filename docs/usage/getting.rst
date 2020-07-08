@@ -45,11 +45,11 @@ If we want to sort the logs according to a field, we can also define a function.
 Note that the logs are sorted per file. LogFlow doesn't sort again the logs per thread. It is a experimental feature, it is better to sort the logs before starting LogFlow.
 
 .. code-block:: python3
-def split_function(line):
-    try:
-        return line.strip().split()[3]
-    except:
-        return "1"
+    def split_function(line):
+        try:
+            return line.strip().split()[3]
+        except:
+            return "1"
 
 3) LogParser
 
