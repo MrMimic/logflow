@@ -13,18 +13,24 @@ Indices and tables
 * :ref:`modindex`
 * :ref:`search`
 
-.. toctree::
-   :maxdepth: 2
-   :caption: Contents:
+
 
 Installation
 ------------
+
+.. toctree::
+   :maxdepth: 2
+   :caption: Contents:
 
    docs/usage/installation
    docs/usage/getting
 
 Documentation for developers
 ----------------------------
+
+.. toctree::
+   :maxdepth: 2
+   :caption: Contents:
    docs/logsparser/doc
    docs/relationsdiscover/doc
    docs/treebuilding/doc
