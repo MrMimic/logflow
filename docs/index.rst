@@ -17,9 +17,25 @@ Indices and tables
    :maxdepth: 2
    :caption: Contents:
 
+Installation
+------------
+
+   docs/usage/installation
+   docs/usage/getting
+
+Documentation for developers
+----------------------------
    docs/logsparser/doc
    docs/relationsdiscover/doc
    docs/treebuilding/doc
+
+Github
+------
+https://github.com/bds-ailab/logflow
+
+Contact
+-------
+marc.platini@gmail.com
 
 
 
