@@ -158,7 +158,7 @@ worker = Worker(cardinalities_choosen=[4,5,6,7], list_cardinalities=list_cardina
 worker.train() # Start learning the correlations
 ```
 
-Additionally, we can have the merged results to compare our results.
+Additionally, we can have the merged results to compare this run to other runs with other parameters
 
 ```python
 results = Results(path_model="model/", name_model="Windows_test")
