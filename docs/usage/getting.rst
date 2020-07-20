@@ -18,7 +18,7 @@ According to the three steps process, the example is split into 3 main parts: th
 
 Start by importing LogFlow
 
-.. code-block:: python3
+.. code-block:: python
     from logflow.logsparser.Dataset import Dataset
     from logflow.logsparser.Parser import Parser
     from logflow.logsparser.Embedding import Embedding
@@ -37,14 +37,14 @@ Start by importing LogFlow
 We need to define a function to get the message part of one log entry. If this function is not provided, the default behavior is to split the log entry according to the space caractere and keep only the word after the 9th (included)
 For the Windows dataset, the message is the words after the 4th word (included)
 
-.. code-block:: python3
+.. code-block:: python
     def parser_function(line):
         return line.strip().split()[4:]
 
 If we want to sort the logs according to a field, we can also define a function. For example, using the Windows dataset, we can sort the logs by node.
 Note that the logs are sorted per file. LogFlow doesn't sort again the logs per thread. It is a experimental feature, it is better to sort the logs before starting LogFlow.
 
-.. code-block:: python3
+.. code-block:: python
     def split_function(line):
         try:
             return line.strip().split()[3]
@@ -56,7 +56,7 @@ Note that the logs are sorted per file. LogFlow doesn't sort again the logs per 
 We can start the first module. The first step is to create a dataset. Then, the parser is used to detect the patterns.
 A new dataset is created using the previous discovered patterns and embeddings using word2vec are computing according to this new dataset.
 
-.. code-block:: python3
+.. code-block:: python
     path_logs = "data/Windows/"
     list_files = []
     for file in listdir(path_logs):
@@ -73,7 +73,7 @@ A new dataset is created using the previous discovered patterns and embeddings u
 4) Model
 
 We can learn the corrections based on the previous embeddings. We can set a size to used only 1 000 000 lines for examples. It can speed up the learning process.
-.. code-block:: python3
+.. code-block:: python
     size=1000000
     list_cardinalities = Dataset_learning(path_model="model/", path_data="data/", name_dataset="Windows_test", size=size).run() # Create your dataset
     worker = Worker(cardinalities_choosen=[4,5,6,7], list_cardinalities=list_cardinalities, path_model="model/", name_dataset="Windows_test") # Create the worker
@@ -83,7 +83,7 @@ We can learn the corrections based on the previous embeddings. We can set a size
 
 All is done, we can have the tree representing the correlations.
 
-.. code-block:: python3
+.. code-block:: python
     dataset = Dataset_building(path_model="model/", name_model="Windows_test", path_data="data/Windows/Windows.log", parser_function=parser_function) # Build your dataset
     dataset.load_files() # Load the model
     dataset.load_logs() # Load the logs
@@ -93,7 +93,7 @@ All is done, we can have the tree representing the correlations.
 6) Get the results (optional)
 
 To rate our model, we can merge the results of cardinalities. 
-.. code-block:: python3
+.. code-block:: python
     results = Results(path_model="model/", name_model="Windows_test")
     results.load_files()
     results.compute_results(condition="Test")
