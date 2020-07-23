@@ -21,13 +21,13 @@ class Dataset:
         path_data (str, optional): path to the data (list of patterns). Defaults to "".
         name_dataset (str, optional): name of the dataset to load. Defaults to "".
         size (int, optional): number of examples to load. Defaults to -1.
-
+        one_model (bool, optional): use one global model instead of one model per cardinality.
     Raises:
         Exception: model file is not found
         Exception: data file is not found
     """
 
-    def __init__(self, path_model="", path_data="", name_dataset="", size=-1):
+    def __init__(self, path_model="", path_data="", name_dataset="", size=-1, one_model=False):
         assert path_model != ""
         assert path_data != ""
         assert name_dataset != ""
@@ -37,6 +37,7 @@ class Dataset:
         self.path_model_w2v = self.path_model + self.name_dataset +"_model.lf"
         self.path_list_classes = self.path_data + self.name_dataset + "_embedding.lf"
         self.size = size
+        self.one_model = one_model
         if not os.path.isfile(self.path_model_w2v):
             raise Exception(self.path_model_w2v + " is not a file")
         if not os.path.isfile(self.path_list_classes):
@@ -65,14 +66,26 @@ class Dataset:
             min_cardinality (int, optional): minimum value of cardinality to be selected. Defaults to 0.
             max_cardinality (float, optional): maximum value of cardinality to be selected. Defaults to float("+inf").
         """
-        list_cardinalities_available = []
-        for event in self.counter:
-            list_cardinalities_available.append(len(str(self.counter[event])))
-        self.set_cardinalities_available = set(list_cardinalities_available)
-        logger.info(str(len(self.set_cardinalities_available)) + " cardinalities available in this dataset")
-        for cardinality in self.set_cardinalities_available:
-            if cardinality > min_cardinality and cardinality < max_cardinality:
-                self.list_cardinalities.append(Cardinality(cardinality=cardinality, path_w2v=self.path_model_w2v, path_list_classes=self.path_list_classes, size=self.size))
+        if self.one_model:
+            list_cardinalities_available = []
+            for event in self.counter:
+                cardinality = len(str(self.counter[event]))
+                min_cardinality = 3
+                max_cardinality = 8
+                if cardinality > min_cardinality and cardinality < max_cardinality:
+                    list_cardinalities_available.append(cardinality)
+            self.set_cardinalities_available = set(list_cardinalities_available)
+            logger.info(str(len(self.set_cardinalities_available)) + " cardinalities available in this dataset")
+            self.list_cardinalities.append(Cardinality(cardinality=0, path_w2v=self.path_model_w2v, path_list_classes=self.path_list_classes, size=self.size, one_model=self.one_model, set_cardinalities=self.set_cardinalities_available))
+        else:
+            list_cardinalities_available = []
+            for event in self.counter:
+                list_cardinalities_available.append(len(str(self.counter[event])))
+            self.set_cardinalities_available = set(list_cardinalities_available)
+            logger.info(str(len(self.set_cardinalities_available)) + " cardinalities available in this dataset")
+            for cardinality in self.set_cardinalities_available:
+                if cardinality > min_cardinality and cardinality < max_cardinality:
+                    self.list_cardinalities.append(Cardinality(cardinality=cardinality, path_w2v=self.path_model_w2v, path_list_classes=self.path_list_classes, size=self.size))
         
     def run(self) -> List[Cardinality]:
         """Start the workflow for the multithreading implementation

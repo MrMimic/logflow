@@ -37,6 +37,18 @@ class UtilTest(unittest.TestCase):
         embedding.load()
         self.assertEqual(len(embedding.list_classes), 5)
         embedding.start()
+        
+        self.assertTrue(os.path.isfile(self.path_data + self.name_dataset + "_embedding.lf"))
+        os.remove(self.path_data + self.name_dataset + "_embedding.lf")
+        self.assertFalse(os.path.isfile(self.path_data + self.name_dataset + "_embedding.lf"))
+
+        self.assertTrue(os.path.isfile(self.path_data + self.name_dataset + "_model.lf"))
+        os.remove(self.path_data + self.name_dataset + "_model.lf")
+        self.assertFalse(os.path.isfile(self.path_data + self.name_dataset + "_model.lf"))
+
+        self.assertTrue(os.path.isfile(self.path_data + self.name_dataset + ".lf"))
+        os.remove(self.path_data + self.name_dataset + ".lf")
+        self.assertFalse(os.path.isfile(self.path_data + self.name_dataset + ".lf"))
 
     def test_clear_list(self):
         embedding = Embedding(loading=False, list_classes=[2,2,2], name_dataset=self.name_dataset, path_data=self.path_data, path_model=self.path_model)
@@ -71,6 +83,8 @@ class UtilTest(unittest.TestCase):
         embedding.create_temporary_file()
         self.assertTrue(os.path.isfile(str(embedding.fp.name)))
         self.assertTrue(os.path.isfile(str(embedding.fp_model.name)))
+        os.remove("./"+str(dataset.name_dataset)+".lf")
+        self.assertFalse(os.path.isfile("./"+str(dataset.name_dataset)+".lf"))
 
         # Don't remove elems
         with patch('builtins.open', mock_open(read_data=pickle.dumps({"word2vec": fakeW2V([2])}))) as m:

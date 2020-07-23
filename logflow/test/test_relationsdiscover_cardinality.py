@@ -18,6 +18,17 @@ class UtilTest(unittest.TestCase):
 
         self.assertEqual(len(cardinality), 4)
 
+    def test_compute_position_one_model(self):
+        cardinality = Cardinality(3, "", "", one_model=True, set_cardinalities=[1,2,3,4,5])
+        cardinality.list_classes = [1,1,1,2,2,3,4,5,6]
+        cardinality.counter= {1:10, 2:100, 3:100, 4:100, 6:1000, 5:1000}
+        cardinality.compute_position()
+        self.assertEqual(len(cardinality.set_classes_kept), 6)
+        self.assertEqual(list(cardinality.list_position), [0, 1, 2, 3, 4, 5, 6, 7, 8])
+        self.assertEqual(cardinality.number_of_classes, 7)
+
+        self.assertEqual(len(cardinality), 9)
+
     def test_compute_position_void(self):
         cardinality = Cardinality(3, "", "")
         cardinality.list_classes = []

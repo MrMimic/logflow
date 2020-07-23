@@ -3,6 +3,7 @@ from loguru import logger
 from collections import Counter
 from logflow.logsparser.Pattern import Pattern
 from typing import Dict, List, Tuple
+from loguru import logger
 # TODO: Test performance of static vs method
 
 class Journal:
@@ -17,9 +18,10 @@ class Journal:
         pointer (int, optional): Optimization for the reading of one large file. Not implemented yet. Defaults to -1.
         encoding (str, optional): Encoding of the files read.  Defaults to "latin-1".
         sort_function (function, optional): Function to sort the logs. Defaults to "", means logs are not sorted.
+        output (str, optional) : Set the output type. "logpai" to be usable with the benchmark provided by logpai. Defaults return only the ID of log.
     """
 
-    def __init__(self, parser_message, path : str , associated_pattern=False, dict_patterns = {}, large_file=False, pointer=-1, encoding="latin-1", sort_function=""):
+    def __init__(self, parser_message, path : str , associated_pattern=False, dict_patterns = {}, large_file=False, pointer=-1, encoding="latin-1", sort_function="", output=""):
         assert path != ""
         assert parser_message != ""
         if associated_pattern:
@@ -36,6 +38,8 @@ class Journal:
         self.dict_message : Dict[Tuple[str, ...], Tuple[str, ...]] = {}
         self.associated_pattern =  associated_pattern
         self.dict_patterns = dict_patterns
+        self.output = output
+
 
     def run(self):
         """Start the process
@@ -51,7 +55,7 @@ class Journal:
             self.dict_message = {}
         else:
             # We associate lines and patterns
-            self.dict_message_associated : Dict[Tuple[str, ...], int]= {}
+            self.dict_message_associated : Dict[Tuple[str, ...], Pattern]= {}
             self.list_patterns = []
             self.read_file()
 
@@ -97,12 +101,18 @@ class Journal:
             frozen_message = tuple(message)
             if frozen_message in self.dict_message_associated:
                 # If we have already seen the message, we know the pattern.
-                self.list_patterns.append(self.dict_message_associated[frozen_message])
+                if self.output == "":
+                    self.list_patterns.append(self.dict_message_associated[frozen_message].id)
+                elif self.output == "logpai":
+                    self.list_patterns.append({'Content': message, 'EventId': int(self.dict_message_associated[frozen_message].id), 'EventTemplate': self.dict_message_associated[frozen_message].pattern_str})
             else:
                 # Else, compute it.
                 best_pattern = Journal.find_pattern(message, self.dict_patterns)
-                self.dict_message_associated[frozen_message] = best_pattern.id
-                self.list_patterns.append(best_pattern.id)
+                self.dict_message_associated[frozen_message] = best_pattern
+                if self.output == "":
+                    self.list_patterns.append(best_pattern.id)
+                elif self.output == "logpai":
+                    self.list_patterns.append({'Content': message, 'EventId': int(best_pattern.id), 'EventTemplate': best_pattern.pattern_str})
     
     def read_file(self):
         """Read the logs files.

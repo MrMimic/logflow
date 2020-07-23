@@ -21,9 +21,11 @@ class Cardinality(Dataset):
         path_list_classes (str): path to the data. The data is the list of patterns to learn.
         path_w2v ([type]): path to the word2vec model. The word2vec model is used to turn a pattern into a vector. 
         size (int, optional): number of examples to use. Defaults to -1.
+        one_model (bool, optional): use one global model instead of one model per cardinality.
+        set_cardinalities (set, optional): use several cardinalities for the learning step of one model. Must be used with one_model.
     """
 
-    def __init__(self, cardinality : int, path_list_classes : str, path_w2v, size=-1):
+    def __init__(self, cardinality : int, path_list_classes : str, path_w2v, size=-1, one_model=False, set_cardinalities=()):
         self.cardinality = cardinality
         self.path_list_classes = path_list_classes
         self.size = size
@@ -32,6 +34,8 @@ class Cardinality(Dataset):
         self.set_classes_kept = ()
         self.loaded = False
         self.size_windows = 30
+        self.one_model = one_model
+        self.set_cardinalities = set_cardinalities
 
     def compute_position(self):
         """Compute the position of each example in the initial list of patterns. Indeed, one cardinality learns only to predict the patterns with a specific cardinality. We store the index
@@ -40,10 +44,16 @@ class Cardinality(Dataset):
         np_list_classes = np.asarray(self.list_classes)
         set_classes = np.unique(np_list_classes)
         list_classes_kept = []
-        for event in set_classes:
-            cardinality = len(str(self.counter[event]))
-            if cardinality == self.cardinality:
-                list_classes_kept.append(event)
+        if self.one_model:
+            for event in set_classes:
+                cardinality = len(str(self.counter[event]))
+                if cardinality in self.set_cardinalities:
+                    list_classes_kept.append(event)
+        else:
+            for event in set_classes:
+                cardinality = len(str(self.counter[event]))
+                if cardinality == self.cardinality:
+                    list_classes_kept.append(event)
         self.set_classes_kept = np.unique(list_classes_kept)
         ix = np.isin(np_list_classes, self.set_classes_kept)
         self.list_position = np.where(ix)[0]

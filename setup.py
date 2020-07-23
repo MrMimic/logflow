@@ -28,5 +28,5 @@ setuptools.setup(
 	"Topic :: Utilities"
     ],
     python_requires='>=3.6.9',
-    install_requires=["numpy>=1.18.5","cython>=0.29.19","typing>=3.7.4.1","loguru>=0.5.0","h5py>=2.10.0","tqdm>=4.46.1","torch>=1.5.0","torchvision>=0.6.0","word2vec>=0.11.1"]
+    install_requires=["numpy>=1.18.5","cython>=0.29.19","typing>=3.7.4.1","loguru>=0.5.0","h5py>=2.10.0","tqdm>=4.46.1","torch>=1.5.0","torchvision>=0.6.0","word2vec>=0.11.1", "pandas>=1.0.5"]
 )

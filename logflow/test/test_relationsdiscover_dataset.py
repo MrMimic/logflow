@@ -16,6 +16,13 @@ class UtilTest(unittest.TestCase):
             dataset = Dataset(path_model="model_test/", path_data="data_test/", name_dataset="DKRZ_test", size=self.size)
 
     @patch('os.path.isfile')    
+    def test_create_model_void(self, mock_isfile):
+        mock_isfile.side_effect = [True, False]
+        # No data
+        with self.assertRaises(Exception):
+            dataset = Dataset(path_model="model_test/", path_data="data_test/", name_dataset="DKRZ_test", size=self.size)
+
+    @patch('os.path.isfile')    
     def test_create_dataset(self, mock_isfile):
         mock_isfile.return_value = True
         # With data
@@ -67,6 +74,19 @@ class UtilTest(unittest.TestCase):
     @patch('os.path.isfile')
     def test_all(self, mock_isfile):
         dataset = Dataset(path_model="model_test/", path_data="data_test/", name_dataset="DKRZ_test")
+        read_data = pickle.dumps({'word2vec': -1, 'counter_patterns': {"1":1, "10":10, "100":100, "1000":1000, "10000":10000, "100000":100000}})
+        mockOpen = mock_open(read_data=read_data)
+        tf = tempfile.NamedTemporaryFile()
+        f = h5py.File(tf, 'w')
+        f.create_dataset("list_classes", data=[1,2,3,4,5])
+        f.close()
+        dataset.path_list_classes = tf.name
+        with patch('builtins.open', mockOpen):
+            dataset.run()
+
+    @patch('os.path.isfile')
+    def test_all_one_model(self, mock_isfile):
+        dataset = Dataset(path_model="model_test/", path_data="data_test/", name_dataset="DKRZ_test", one_model=True)
         read_data = pickle.dumps({'word2vec': -1, 'counter_patterns': {"1":1, "10":10, "100":100, "1000":1000, "10000":10000, "100000":100000}})
         mockOpen = mock_open(read_data=read_data)
         tf = tempfile.NamedTemporaryFile()

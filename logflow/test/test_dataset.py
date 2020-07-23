@@ -27,6 +27,10 @@ class UtilTest(unittest.TestCase):
 
     def test_dataset(self):
         with patch('builtins.open', mock_open(read_data=self.data_test)) as m:
+            dataset = Dataset(['test'], nb_cpu=40)
+            self.assertEqual(dataset.nb_cpu, 40)
+
+        with patch('builtins.open', mock_open(read_data=self.data_test)) as m:
             dataset = Dataset(['test'])
             self.assertEqual(len(dataset.counter_general_per_cardinality), 1)
             self.assertEqual(len(dataset.counter_general_per_cardinality[7]), 1)
@@ -56,7 +60,7 @@ class UtilTest(unittest.TestCase):
             dataset = Dataset(['test'], dict_patterns=self.dict_patterns)
             journal = Journal(parser_message=Dataset.parser_message, path=['test'], associated_pattern=False, dict_patterns = {}, large_file=False, pointer=-1, encoding="utf-8")
             self.assertIsInstance(dataset.execute(journal), Journal)
-
+ 
         with patch('builtins.open', mock_open(read_data=self.data_test)) as m:
             dataset = Dataset(['test'], dict_patterns=self.dict_patterns, saving=True, path_data="./")
             self.assertTrue(os.path.isfile("./"+str(dataset.name_dataset)+".lf"))
@@ -69,3 +73,11 @@ class UtilTest(unittest.TestCase):
             self.assertTrue(os.path.isfile("./"+str(dataset.name_dataset)+".lf"))
             os.remove("./"+str(dataset.name_dataset)+".lf")
             self.assertFalse(os.path.isfile("./"+str(dataset.name_dataset)+".lf"))
+
+        with patch('builtins.open', mock_open(read_data=self.data_test)) as m:
+            dataset = Dataset(['test'], dict_patterns=self.dict_patterns, saving=True, path_data="./", output="logpai")
+            self.assertListEqual(dataset.list_patterns, [{'Content': ['011023', 'session', '01107', '01014', 'User', '11116', 'NB'], 'EventId': -1, 'EventTemplate': ' * session * * User *'}, {'Content': ['011023', 'session', '01107', '01014', 'User', '11116', 'NB'], 'EventId': -1, 'EventTemplate': ' * session * * User *'}, {'Content': ['011023', 'session', '01107', '01014', 'User', '11116', 'NB'], 'EventId': -1, 'EventTemplate': ' * session * * User *'}])
+
+        with patch('builtins.open', mock_open(read_data=self.data_test)) as m:
+            dataset = Dataset(['test'], dict_patterns=self.dict_patterns, saving=True, path_data="./", output="logpai", multithreading=False)
+            self.assertListEqual(dataset.list_patterns, [{'Content': ['011023', 'session', '01107', '01014', 'User', '11116', 'NB'], 'EventId': -1, 'EventTemplate': ' * session * * User *'}, {'Content': ['011023', 'session', '01107', '01014', 'User', '11116', 'NB'], 'EventId': -1, 'EventTemplate': ' * session * * User *'}, {'Content': ['011023', 'session', '01107', '01014', 'User', '11116', 'NB'], 'EventId': -1, 'EventTemplate': ' * session * * User *'}])

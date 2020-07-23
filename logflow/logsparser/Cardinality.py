@@ -49,7 +49,7 @@ class Cardinality:
             best_subset_words_value = [entry[i] for i in best_subset_words_index]
             self.list_pattern.append(Pattern(self.cardinality, best_subset_words_value, best_subset_words_index))
         self.list_pattern = list(set(self.list_pattern))
-        logger.debug("Cardinality: " + str(self.cardinality) + " found " + str(len(self.list_pattern)) + " patterns")
+        # logger.debug("Cardinality: " + str(self.cardinality) + " found " + str(len(self.list_pattern)) + " patterns")
 
     def order_pattern(self):
         """Order the pattern by size to have a fast association between lines and patterns.

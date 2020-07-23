@@ -24,9 +24,9 @@ class Worker_single():
         batch_size (int, optional): size of the batch. Defaults to 128.
         path_model (str, optional): path to the model to save. Defaults to "".
         name_dataset (str, optional): name of the dataset. Defaults to "".
-        batch_result (int, optional): show results each batch_result number of batchs. faults to 2000.
+        batch_result (int, optional): show results each batch_result number of batchs. Defaults to 2000.
     """
-    def __init__(self, cardinality: Cardinality, lock : threading.Lock, batch_size=128, path_model="", name_dataset ="", batch_result=2000):
+    def __init__(self, cardinality: Cardinality, lock : threading.Lock, batch_size=128, path_model="", name_dataset ="", batch_result=20000):
         self.dataset = cardinality
         self.cardinality = self.dataset.cardinality
         self.batch_size = batch_size

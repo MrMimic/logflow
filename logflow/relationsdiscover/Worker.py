@@ -16,15 +16,17 @@ class Worker:
         path_model (str, optional): path to the model to save. Defaults to "".
         name_dataset (str, optional): name of the dataset. Defaults to "".
         cardinalities_choosen (List[int], optional): list of cardinalities to use. This list contains only the value of cardinalities to be used. [-1] means all cardinalities. Defaults to [-1].
+        one_model (bool, optional): use one global model instead of one model per cardinality.
     """
 
-    def __init__(self, list_cardinalities : List[Cardinality], batch_size=128, multithreading=True, path_model="", name_dataset="", cardinalities_choosen=[-1]):
+    def __init__(self, list_cardinalities : List[Cardinality], batch_size=128, multithreading=True, path_model="", name_dataset="", cardinalities_choosen=[-1], one_model=False):
         self.list_cardinalities = list_cardinalities
         self.batch_size = batch_size
         self.multithreading = multithreading
         self.workers : List[Worker_single]= []
         self.path_model= path_model
         self.name_dataset = name_dataset
+        self.one_model = one_model
         if cardinalities_choosen != [-1]:
             list_cardinalities_tmp = []
             for cardinality in self.list_cardinalities:
@@ -44,8 +46,13 @@ class Worker:
         if resume:
             assert self.path_model != ""
             assert self.name_dataset != ""
-        for cardinality in self.list_cardinalities:
-            self.workers.append(Worker_single(cardinality=cardinality, batch_size=self.batch_size, path_model=self.path_model, name_dataset=self.name_dataset, lock=self.lock))
+        if self.one_model:
+            assert len(self.list_cardinalities) == 1
+            self.workers.append(Worker_single(cardinality=self.list_cardinalities[0], batch_size=self.batch_size, path_model=self.path_model, name_dataset=self.name_dataset, lock=self.lock))
+        else:
+            for cardinality in self.list_cardinalities:
+                self.workers.append(Worker_single(cardinality=cardinality, batch_size=self.batch_size, path_model=self.path_model, name_dataset=self.name_dataset, lock=self.lock))
+        
         if self.multithreading:
             torch.multiprocessing.spawn(Worker.execute_train, args=(self.workers), daemon=False, nprocs=len(self.workers), join=True)
         else:
@@ -98,4 +105,6 @@ class Worker:
                     worker.train()
                 except (IOError, ValueError):
                     logger.critical("Cardinality " + str(worker.cardinality) + " Error when loading file")
+                except:
+                    logger.critical("Cardinality " + str(worker.cardinality) + "Unknown error")
             index += 1
