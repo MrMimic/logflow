@@ -191,4 +191,5 @@ https://logflow.readthedocs.io/en/latest/
 
 ## Contact
 marc.platini@gmail.com
+marc.platini@atos.net
 
