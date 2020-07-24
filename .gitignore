@@ -1,0 +1,5 @@
+docs/_build/**
+cookbook/data/**
+*.html
+*.pyc
+*.vscode
