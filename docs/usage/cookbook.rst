@@ -8,21 +8,14 @@ First, we begin by giving the list of recipes available. Then, we explain major 
 List of recipes
 ---------------
 
-Recipes are based on two main dataset Windows and Thunderbird. They should be adapted to work with your dataset.
+Recipes are based on the Windows dataset. They should be adapted to work with your dataset.
 
-1) Windows
 - total_Windows.py : Complete example on Windows
 - sorted_Windows.py : Complete example with logs sorted by nodes.
 - multithreading_Windows.py : Complete example while setting the multithreading option.
 - one_model_Windows.py : Complete example using only one LSTM model instead of one model per cardinality.
 - logpai_Windows.py : Parser example with output set to "logpai" to use the benchmark provided by LogPai.
 
-2) Thunderbird
-- total_Thunderbird.py : Complete example on Windows
-- sorted_Thunderbird.py : Complete example with logs sorted by nodes.
-- multithreading_Thunderbird.py : Complete example while setting the multithreading option.
-- one_model_Thunderbird.py : Complete example using only one LSTM model instead of one model per cardinality.
-- logpai_Thunderbird.py : Parser example with output set to "logpai" to use the benchmark provided by LogPai.
 
 Major options
 -------------
