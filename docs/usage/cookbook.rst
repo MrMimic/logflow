@@ -37,16 +37,19 @@ This function takes a line and return the message part.
 Then, you need to provide it each time a dataset is created:
 
 During the reading step
+
 .. code-block:: python3
 
     dataset = Dataset(list_files=list_files, parser_function=parser_function)
 
 During the parsing step
+
 .. code-block:: python3
 
     Dataset(list_files=list_files, dict_patterns=patterns, saving=True, path_data="data/", name_dataset="Test", path_model="model/", parser_function=parser_function, sort_function=sort_function, output="logpai") # Write the dataset
 
 During the tree building.
+
 .. code-block:: python3
     
     dataset = Dataset_building(path_model="model/", name_model="Test", path_data="data/Windows/Windows.log", index_line_max=30000, parser_function=parser_function)

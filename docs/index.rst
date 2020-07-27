@@ -21,6 +21,14 @@ Installation
 
    usage/installation
 
+Overview
+--------
+
+.. toctree::
+   :maxdepth: 2
+
+   cookbook/algo
+
 How to use it
 -------------
 
@@ -30,6 +38,7 @@ How to use it
 
    usage/getting
    usage/cookbook
+
 
 
 Documentation for developers
