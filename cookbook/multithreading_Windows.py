@@ -26,9 +26,9 @@ if __name__== "__main__":
             list_files.append(path_logs + "/" + file)
 
     # Find the patterns
-    dataset = Dataset(list_files=list_files, parser_function=parser_function)
+    dataset = Dataset(list_files=list_files, parser_function=parser_function, nb_cpu=20)
     patterns = Parser(dataset).detect_pattern()
-    Dataset(list_files=list_files, dict_patterns=patterns, saving=True, path_data="data/", name_dataset="Windows", path_model="model/", parser_function=parser_function) # Write the dataset
+    Dataset(list_files=list_files, dict_patterns=patterns, saving=True, path_data="data/", name_dataset="Windows", path_model="model/", parser_function=parser_function, nb_cpu=20) # Write the dataset
     Embedding(loading=True, name_dataset="Windows", path_data="data/", path_model="model/").start()
 
     # Learn the correlations

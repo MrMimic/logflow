@@ -18,6 +18,15 @@ from os.path import isfile
 def parser_function(line):
     return line.strip().split()[4:]
 
+def split_function(line):
+    try:
+        return line.strip().split()[3]
+    except:
+        return "1"
+
+def sort_function(list_lines):
+    return sorted(list_lines, key=lambda line: split_function(line))
+
 if __name__== "__main__":
     path_logs = "data/Windows/"
     list_files = []
@@ -28,7 +37,7 @@ if __name__== "__main__":
     # Find the patterns
     dataset = Dataset(list_files=list_files, parser_function=parser_function)
     patterns = Parser(dataset).detect_pattern()
-    Dataset(list_files=list_files, dict_patterns=patterns, saving=True, path_data="data/", name_dataset="Windows", path_model="model/", parser_function=parser_function) # Write the dataset
+    Dataset(list_files=list_files, dict_patterns=patterns, saving=True, path_data="data/", name_dataset="Windows", path_model="model/", parser_function=parser_function, , sort_function=sort_function) # Write the dataset
     Embedding(loading=True, name_dataset="Windows", path_data="data/", path_model="model/").start()
 
     # Learn the correlations

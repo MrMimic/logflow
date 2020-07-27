@@ -11,8 +11,6 @@ Indices and tables
 
 * :ref:`genindex`
 * :ref:`modindex`
-* :ref:`search`
-
 
 
 Installation
@@ -22,10 +20,22 @@ Installation
    :maxdepth: 2
 
    usage/installation
+
+How to use it
+-------------
+
+
+.. toctree::
+   :maxdepth: 2
+
    usage/getting
+   usage/cookbook
+
 
 Documentation for developers
 ----------------------------
+
+Documentation of the three parts of LogFlow is available here:
 
 .. toctree::
    :maxdepth: 2

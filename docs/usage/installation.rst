@@ -1,5 +1,5 @@
-Welcome to LogFlow's documentation!
-===================================
+LogFlow installation
+====================
 
 How to install it ?
 

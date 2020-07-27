@@ -1,5 +1,6 @@
 Welcom to the cooking workshop for LogFlow.
 
+## Get ready
 The first thing to do is to download the data using the associated script. 
 You will need around 200 Go if you want to be able to play with all the data. Otherwise, you can focus on a small dataset such as Spark or Windows.
 
@@ -37,9 +38,16 @@ cd /home/code/cookbook/
 Now, you are ready to parser and learn the correlations.
 You will find several scripts for helping you to configure LogFlow according to your wishes.
 
-If you just want to test quikly :
+If you just want to test quickly :
 ```python
 python3.6 total_Windows.py
 ```
 
 Have fun :)
+
+## List of scripts :
+
+
+## Documentation
+More documentation can be found on our readthedoc project : 
+

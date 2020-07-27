@@ -10,9 +10,98 @@ You can find data to test LogFlow on the LogHub repository: https://github.com/l
 
 Note that LogFlow is optimized to handle several small files rather than one large file. Then, we can split the Windows dataset into several small files by using split on linux.
 
-Example
--------
 
+Workflow
+--------
+
+For each new dataset, we always need to do three main steps according to the three steps process:
+- Parse the logs
+- Learn the correlations
+- Show the correlations using a correlations tree
+
+1) Parse the logs
+This first step is split into 4 parts. You need to define a function "parser_function" to get the message part of your log (see example "First Example" for example). 
+
+The first part is to read the data and to generate the associated hashmap used by logflow.
+Assuming you have a "list_files" variable containing the list of files you want to process, this part is done by:
+
+.. code-block:: python3
+
+    dataset = Dataset(list_files=list_files, parser_function=parser_function) # Generate your data
+
+Next, we can detect the patterns using the previous dataset computed.
+
+.. code-block:: python3
+
+    patterns = Parser(dataset).detect_pattern() # Detect patterns
+
+Then, we can build the dataset using the previous computed patterns. Note, this step write to the disk the dataset used further for the learning step.
+This dataset contains the computed patterns and the list of logs replaced by their pattern id.
+
+.. code-block:: python3
+
+    Dataset(list_files=list_files, dict_patterns=patterns, saving=True, path_data="data/", name_dataset="Windows_test", path_model="model/", parser_function=parser_function) # Apply the detected patterns to the data
+
+The last step is to turn this pattern id into numerical vector
+
+.. code-block:: python3
+
+    Embedding(loading=True, name_dataset="Windows_test", path_data="data/", path_model="model/").start() # Generate embedding for the LSTM
+
+
+2) Learn the correlations
+Now, we can use the model based on a LSTM to learn the correlations between our logs.
+
+The first part is to create the dataset per cardinality. For reminder, during the learning step, we have one LSTM model per cardinality to handle the issue of highly imbalanced dataset.
+
+.. code-block:: python3
+
+    list_cardinalities = Dataset_learning(path_model="model/", path_data="data/", name_dataset="Windows_test").run() # Create your dataset
+    
+Now, we can build our models. Note that you can choose your cardinalties to be learn by setting the cardinalities_choosen parameter.
+
+.. code-block:: python3
+
+    worker = Worker(cardinalities_choosen=[4,5,6,7], list_cardinalities=list_cardinalities, path_model="model/", name_dataset="Windows_test") # Create the worker
+
+The last step is to start the training step. The models are saved automaticaly. The learning step is stopped using a stopping condition: the last increase of the macro-f1 value is lower than 0.01 during 3 consecutives steps.
+
+.. code-block:: python3
+
+    worker.train() # Start learning the correlations
+
+3) Show the correlations tree.
+We can used the previous learned model to show the correlations between our logs.
+
+Again, we create our dataset containing our learned model and the patterns discovered during the first step.
+
+.. code-block:: python3
+
+    dataset = Dataset_building(path_model="model/", name_model="Windows_test", path_data="data/Windows/Windows.log", parser_function=parser_function) # Build your dataset
+
+We load the files and the logs
+
+.. code-block:: python3
+
+    dataset.load_files() # Load the model
+    dataset.load_logs() # Load the logs
+
+We create our workflow process (a workflow is a complete step including the log parser, the embedding step and the model inference to process raw log).
+
+.. code-block:: python3
+
+    workflow = Workflow(dataset) # Build your workflow
+
+Then, we get the tree!
+
+.. code-block:: python3
+
+        workflow.get_tree(index_line=24712) # Get the tree of the 2338th line
+
+
+First Example
+-------------
+A complete example is given here. It is based on main.py provided at the root of the repository.
 According to the three steps process, the example is split into 3 main parts: the logparser, the model and the tree builder.
 
 1) LogFlow import
@@ -54,6 +143,9 @@ Note that the logs are sorted per file. LogFlow doesn't sort again the logs per 
             return line.strip().split()[3]
         except:
             return "1"
+
+    def sort_function(list_lines):
+        return sorted(list_lines, key=lambda line: split_function(line))
 
 3) LogParser
 

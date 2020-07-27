@@ -32,7 +32,7 @@ if __name__== "__main__":
     Embedding(loading=True, name_dataset="Windows", path_data="data/", path_model="model/").start()
 
     # Learn the correlations
-    list_cardinalities = Dataset_learning(path_model="model/", path_data="data/", name_dataset="Windows").run()
+    list_cardinalities = Dataset_learning(path_model="model/", path_data="data/", name_dataset="Windows", one_model=True).run()
     worker = Worker(cardinalities_choosen=[4,5,6,7], list_cardinalities=list_cardinalities, path_model="model/", name_dataset="Windows")
     worker.train()
 
