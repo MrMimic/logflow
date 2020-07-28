@@ -1,12 +1,18 @@
 Getting Started
 ===============
 
-LogFlow aims at processing logs. The first step is to get data to test it.
+The first section describes the way to get the dataset.
+The second section shows the classical way to use LogFlow.
+The third section gives a complete example. 
+
+Note that more complete explanation can be found on the :ref:`cookbook` section
 
 Data
 ----
 
-You can find data to test LogFlow on the LogHub repository: https://github.com/logpai/loghub The following example is based on the Windows dataset.
+You can find data to test LogFlow on the LogHub repository: https://github.com/logpai/loghub 
+
+The following example is based on the Windows dataset.
 
 Note that LogFlow is optimized to handle several small files rather than one large file. Then, we can split the Windows dataset into several small files by using split on linux.
 
@@ -15,11 +21,13 @@ Workflow
 --------
 
 For each new dataset, we always need to do three main steps according to the three steps process:
+
 - Parse the logs
 - Learn the correlations
 - Show the correlations using a correlations tree
 
 1) Parse the logs
+
 This first step is split into 4 parts. You need to define a function "parser_function" to get the message part of your log (see example "First Example" for example). 
 
 The first part is to read the data and to generate the associated hashmap used by logflow.
@@ -50,6 +58,7 @@ The last step is to turn this pattern id into numerical vector
 
 
 2) Learn the correlations
+
 Now, we can use the model based on a LSTM to learn the correlations between our logs.
 
 The first part is to create the dataset per cardinality. For reminder, during the learning step, we have one LSTM model per cardinality to handle the issue of highly imbalanced dataset.
@@ -71,6 +80,7 @@ The last step is to start the training step. The models are saved automaticaly. 
     worker.train() # Start learning the correlations
 
 3) Show the correlations tree.
+
 We can used the previous learned model to show the correlations between our logs.
 
 Again, we create our dataset containing our learned model and the patterns discovered during the first step.

@@ -6,6 +6,9 @@
 Welcome to LogFlow's documentation!
 ===================================
 
+This documentation is a developer's documentation but also an explanation about how LogFlow works.
+If you have any question, please feel free to contact me: marc.platini@gmail.com
+
 Indices and tables
 ==================
 
@@ -16,6 +19,8 @@ Indices and tables
 Installation
 ------------
 
+Installation part. For the moment, please prefer to use the docker way.
+
 .. toctree::
    :maxdepth: 2
 
@@ -24,14 +29,16 @@ Installation
 Overview
 --------
 
+Explanation about how LogFlow works. 
+
 .. toctree::
    :maxdepth: 2
 
-   cookbook/algo
+   usage/algo
 
 How to use it
 -------------
-
+Getting started part. Complete python script can be found on our `repository <https://github.com/bds-ailab/logflow/tree/master/cookbook>`_
 
 .. toctree::
    :maxdepth: 2
@@ -55,11 +62,19 @@ Documentation of the three parts of LogFlow is available here:
 
 Github
 ------
+
+Source code can be found on our repository:
+
 https://github.com/bds-ailab/logflow
 
 Contact
 -------
+
+If you have any question:
+
 marc.platini@gmail.com
+
+marc.platini@atos.net
 
 
 

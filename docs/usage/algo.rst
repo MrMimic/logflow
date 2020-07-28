@@ -33,7 +33,8 @@ Note that LogFlow is not the first work on logs. This field is split into two ma
 - The model to add value to log.
 
 1) The log parsing task.
-The log parsing task aims at answering this question: Do these two papers describe the same event?
+
+The log parsing task aims at answering this question: Do these two lines describe the same event?
 Indeed, considering the two following lines:
 
 .. code-block:: bash
@@ -48,7 +49,7 @@ Then, we need to build a method to discover these events and to describe these t
 
     * Package temperature above threshold
 
-When * denotes any word.
+Where * denotes any word.
 
 We can find several parser in the litterature to solve this issue. Using the survey provided by LogPai (https://github.com/logpai/logparser), we can find at least 13 parsers.
 Why develop a new one? Because we are better! (That is not the right answer).
@@ -57,6 +58,7 @@ We think that this processing time is a major issue in our inter-connected world
 This is why we develop the parser part of LogFlow. 
 
 2) Adding value to logs.
+
 Most of the work focuses on predicting failures based on logs. We prefer to take another approach: use the knowledge of the administrator instead of replacing it by algorithms.
 Why? Because we think that it can be complicated to entierly describe the system to integrate all the knowledge about the system inside a model. Then, we prefer to use the knowledge of the administrator and help him to focus on relevant information.
 
@@ -65,6 +67,7 @@ Main issues solved by LogFlow
 ------------------------
 
 1) Performance of the log parser.
+
 As we previously explained, actual state-of-the-art parsers fail to parser large dataset in less than 1 day.
 To solve this issue, we develop a parser based on two mains ideas:
 - Two lines of logs describe the same event if they have the same number of words.
@@ -75,11 +78,13 @@ Additionally, word descriptors and hashmap are used to better describe the words
 Namely, we are able to parse Thunderbird and DKRZ dataset in less than 3 minutes!
 
 2) Deduce causal correlations from the LSTM
+
 Unfortunatly, LSTM models are black box models. Then, we cannot know the correlations used by the model to predict the next line of logs.
 
 To solve this first issue, we use an attention layer to get the weight of each input. The more weight, the more impact of the prediction of the LSTM.
 
 3) Without parameters
+
 By design, LogFlow does not require any parameters. You can know forget the tedious task of deriving the optimal parameters from a bunch of boring experiments.
 
 LogFlow algorithm example
@@ -111,6 +116,7 @@ describing the presence of a type of character: numerical characters, uppercase 
 Then, we have:
 
 .. code-block:: bash
+
     1) (0,1,1,1,19) changed from NB to NB
     2) Connection of user (1,0,1,0,3) from Moon
     3) (0,1,1,1,19) changed from NB to NB
@@ -122,11 +128,13 @@ We count the common words with other lines for each line (it uses hashmap in the
 
 We have:
 
-1) [1, 1, 1, 1, 1, 1]
-2) [2, 2, 2, 0, 2, 1]
-3) [1, 1, 1, 1, 1, 1]
-4) [2, 2, 2, 0, 2, 1]
-5) [2, 2, 2, 0, 2, 0]
+.. code-block:: bash
+
+    1) [1, 1, 1, 1, 1, 1]
+    2) [2, 2, 2, 0, 2, 1]
+    3) [1, 1, 1, 1, 1, 1]
+    4) [2, 2, 2, 0, 2, 1]
+    5) [2, 2, 2, 0, 2, 0]
 
 For the line 2), the fixed parts are the most common parts in a log. Hence, the common words with 2 other lines. 
 For this line, we get "user * from *"

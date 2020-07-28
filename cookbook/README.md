@@ -48,6 +48,14 @@ Have fun :)
 ## List of scripts :
 
 
+- total_Windows.py : Complete example on Windows
+- sorted_Windows.py : Complete example with logs sorted by nodes.
+- multithreading_Windows.py : Complete example while setting the multithreading option.
+- one_model_Windows.py : Complete example using only one LSTM model instead of one model per cardinality.
+- logpai_Windows.py : Parser example with output set to "logpai" to use the benchmark provided by LogPai.
+
+
+
 ## Documentation
-More documentation can be found on our readthedoc project : 
+More documentation can be found on our readthedoc project: file:///home/marc/Documents/push_test/logflow/docs/_build/html/usage/cookbook.html#list-of-recipes
 
