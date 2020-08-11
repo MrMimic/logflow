@@ -25,16 +25,31 @@ class Worker_single():
         path_model (str, optional): path to the model to save. Defaults to "".
         name_dataset (str, optional): name of the dataset. Defaults to "".
         batch_result (int, optional): show results each batch_result number of batchs. Defaults to 2000.
+        exclude_test (boolean, optional): exlude the testing step during the learning step. Can be use with the timer as stopping condition to have an exact duration.
+        stoppingcondition (str, optional): condition to stop the learning step (timer, earlystopping, epoch). Defaults to earlystopping.
+        condition_value (float, optional): stoppingcondition option. Value of the increase. Defaults to 0.005.
+        condition_step (int, optional): stoppingcondition option. Number of steps. Defaults to 3.
+        duration (int, optional): stoppingcondition option. Duration of the learning step in minute. Defaults to 60.
+        condition_epoch (int, optional): stoppingcondition option. Number of epochs to be done. Defaults to 3.
     """
-    def __init__(self, cardinality: Cardinality, lock : threading.Lock, batch_size=128, path_model="", name_dataset ="", batch_result=20000):
+    def __init__(self, cardinality: Cardinality, lock : threading.Lock, batch_size=128, path_model="", name_dataset ="", batch_result=20000, exclude_test=False, stoppingcondition="earlystopping", condition_value=0.005, condition_step=3, duration=5, condition_epoch=3):
         self.dataset = cardinality
         self.cardinality = self.dataset.cardinality
         self.batch_size = batch_size
         self.model = -1
-        self.stopping_condition = StoppingCondition(method="earlystopping", condition_value = 0.005, condition_step=3)
+        # self.stopping_condition = StoppingCondition(method="earlystopping", condition_value = 0.005, condition_step=3)
+        if stoppingcondition == "earlystopping":
+            self.stopping_condition = StoppingCondition(method=stoppingcondition, condition_value=condition_value, condition_step=condition_step)
+        elif stoppingcondition == "timer":
+            self.stopping_condition = StoppingCondition(method=stoppingcondition, duration=duration)
+        elif stoppingcondition == "epoch":
+            self.stopping_condition = StoppingCondition(method=stoppingcondition, condition_epoch=condition_epoch)
+        else:
+            raise Exception("Stopping condition method is not implemented. Please use 'earlystopping', 'timer', or 'epoch'") 
         self.path_model = path_model
         self.name_dataset = name_dataset
         self.lock = lock
+        self.exlude_test = exclude_test
         self.saver = Saver(path_model=self.path_model, name_model=self.name_dataset, cardinality=self.cardinality, lock=self.lock)
         self.batch_result = batch_result
 
@@ -133,10 +148,17 @@ class Worker_single():
                 if index_batch % self.batch_result == 0 and index_batch != 0:
                     result.computing_result(progress=index_batch/len(dataloader_train))
                     self.saver.save(model=self.model, result=result, condition="temp")
-                    # Test only on a subsample
-                    self.test(subsample=True, subsample_split=0.1)
-            # At the end of one epoch, use the all testing test
-            self.test()
+                    if not self.exlude_test:
+                        # Test only on a subsample
+                        self.test(subsample=True, subsample_split=0.1)
+                    print(self.stopping_condition)
+                # Test if we stop only for the timer method at each batch
+                if self.stopping_condition.method == "timer" and self.stopping_condition.stop():
+                    logger.debug("[Stopping] Cardinality: " + str(self.cardinality) + " " + str(self.stopping_condition) + " stopping learning step.")
+                    break
+            # At the end of one epoch, use the all testing test and update the condition
+            if not self.exlude_test:
+                self.test()
             result.computing_result(reinit=True, progress=1)
             if self.stopping_condition.stop():
                 logger.debug("[Stopping] Cardinality: " + str(self.cardinality) + " " + str(self.stopping_condition) + " stopping learning step.")

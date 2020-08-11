@@ -1,5 +1,6 @@
 import unittest
 from logflow.relationsdiscover.StoppingCondition import StoppingCondition
+import time
 
 class UtilTest(unittest.TestCase):
     def test_creation(self):
@@ -60,6 +61,27 @@ class UtilTest(unittest.TestCase):
         self.assertAlmostEqual(self.stop.last_increased, 0.01)
         self.assertTrue(self.stop.stop())
         self.assertEqual(str(self.stop), "Condition is reached, last increase is: 0.010000000000000009")
+
+    def test_epoch(self):
+        self.stop = StoppingCondition(method="epoch", condition_epoch=3)
+        self.stop.update()
+        self.assertEqual(self.stop.nb_epoch, 1)
+        self.assertFalse(self.stop.stop())
+        self.assertTrue( "Condition is not reached" in str(self.stop))
+        self.stop.update()
+        self.stop.update()
+        self.assertTrue(self.stop.stop())
+        self.assertTrue( "Condition is reached" in str(self.stop))
+
+    def test_timer(self):
+        self.stop = StoppingCondition(method="timer", duration=3)
+        self.assertFalse(self.stop.stop())
+        time.sleep(1)
+        self.assertTrue( "Condition is not reached" in str(self.stop))
+        self.assertFalse(self.stop.stop())
+        time.sleep(3)
+        self.assertTrue(self.stop.stop())
+        self.assertTrue( "Condition is reached" in str(self.stop))
 
 
 

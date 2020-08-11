@@ -27,6 +27,11 @@ class UtilTest(unittest.TestCase):
             cardinality.load_files()
         self.cardinality = cardinality
         worker_single = Worker_single(cardinality = self.cardinality, lock=self.lock)
+        worker_single = Worker_single(cardinality = self.cardinality, lock=self.lock, stoppingcondition="timer")
+        worker_single = Worker_single(cardinality = self.cardinality, lock=self.lock, stoppingcondition="earlystopping")
+        worker_single = Worker_single(cardinality = self.cardinality, lock=self.lock, stoppingcondition="epoch")
+        with self.assertRaises(Exception):
+            worker_single = Worker_single(cardinality = self.cardinality, lock=self.lock, stoppingcondition="unimplemented")
         tf.close()
 
     @patch('os.path.isfile')
