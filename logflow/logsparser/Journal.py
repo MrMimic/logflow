@@ -6,6 +6,7 @@ from typing import Dict, List, Tuple, Union, Any
 from loguru import logger
 # TODO: Test performance of static vs method
 
+
 class Journal:
     """A journal is a list of logs files. It reads, parses and associates the logs and the pattern.
 
@@ -21,7 +22,7 @@ class Journal:
         output (str, optional) : Set the output type. "logpai" to be usable with the benchmark provided by logpai. Defaults return only the ID of log.
     """
 
-    def __init__(self, parser_message, path : str , associated_pattern=False, dict_patterns = {}, large_file=False, pointer=-1, encoding="latin-1", sort_function="", output=""):
+    def __init__(self, parser_message, path: str, associated_pattern=False, dict_patterns={}, large_file=False, pointer=-1, encoding="latin-1", sort_function="", output=""):
         assert parser_message != ""
         if associated_pattern:
             assert dict_patterns != {}
@@ -33,12 +34,11 @@ class Journal:
         self.sort_function = sort_function
         self.parser_message = parser_message
         self.encoding = encoding
-        self.dict_words_descriptors : Dict[str, str]= {}
-        self.dict_message : Dict[Tuple[str, ...], Tuple[str, ...]] = {}
-        self.associated_pattern =  associated_pattern
+        self.dict_words_descriptors: Dict[str, str] = {}
+        self.dict_message: Dict[Tuple[str, ...], Tuple[str, ...]] = {}
+        self.associated_pattern = associated_pattern
         self.dict_patterns = dict_patterns
         self.output = output
-
 
     def run(self):
         """Start the process
@@ -54,20 +54,20 @@ class Journal:
             self.dict_message = {}
         else:
             # We associate lines and patterns
-            self.dict_message_associated : Dict[Tuple[str, ...], Pattern]= {}
+            self.dict_message_associated: Dict[Tuple[str, ...], Pattern] = {}
             self.list_patterns = []
             # No need to parse any file to load found pattern as a model
             if self.path:
                 self.read_file()
 
-    def count_log(self, line : str):
+    def count_log(self, line: str):
         """Count the number of same entries according to their descriptors. for space and computation optimization.
 
         Example using 3 entries :
         "Connexion of user Marc"
         "Connexion of user Marc"
         "Application failure node [1,0,0,2,4]"
-        
+
         Counter_logs will be : {"Connexion of user Marc":2, "Application failure node [1,0,0,2,4]", 1}.
 
         To avoid useless computation, we use a dictionnary of line and line's descriptors. We do not compute the descriptors each time for each line.
@@ -76,28 +76,31 @@ class Journal:
             line (str): line of log to add to the counter.
         """
         # Parse the message to have the descriptors.
-        message : List[str] = self.parser_message(line=line)
+        message: List[str] = self.parser_message(line=line)
         if len(message) > 0:
             # Get the frozen message because python can't used list as dictionnary key.
-            frozen_message : Tuple[str, ...] = tuple(message)
+            frozen_message: Tuple[str, ...] = tuple(message)
             if frozen_message in self.dict_message:
                 # If the message is already in the dict, get the associated descriptors and add +1
                 self.counter_logs[self.dict_message[frozen_message]] += 1
             else:
                 # Else, compute the descriptors, add the line and descriptors into the dict, and add the line of descriptors to the dict.
-                frozen_message_descriptors = tuple([self.filter_word(word) for word in message])
-                self.dict_message.setdefault(frozen_message, frozen_message_descriptors)
+                frozen_message_descriptors = tuple(
+                    [self.filter_word(word) for word in message])
+                self.dict_message.setdefault(
+                    frozen_message, frozen_message_descriptors)
                 self.counter_logs.setdefault(frozen_message_descriptors, 1)
                 self.counter_logs[self.dict_message[frozen_message]] += 1
 
-    def associate_pattern(self, line : str) -> Union[int, Dict[str, Any]]:
+    def associate_pattern(self, line: str) -> Union[int, Dict[str, Any]]:
         """Associate a line with a pattern. Add this pattern to the list of patterns.
 
         Args:
             line (str): line to be associated.
         """
         # Parse the message
-        message = [self.filter_word(word) for word in self.parser_message(line=line)]
+        message = [self.filter_word(word)
+                   for word in self.parser_message(line=line)]
         if len(message) > 0:
             frozen_message = tuple(message)
             if frozen_message in self.dict_message_associated:
@@ -106,17 +109,20 @@ class Journal:
                     pattern = self.dict_message_associated[frozen_message].id
                     self.list_patterns.append(pattern)
                 elif self.output == "logpai":
-                    pattern = {'Content': message, 'EventId': int(self.dict_message_associated[frozen_message].id), 'EventTemplate': self.dict_message_associated[frozen_message].pattern_str}
+                    pattern = {'Content': message, 'EventId': int(
+                        self.dict_message_associated[frozen_message].id), 'EventTemplate': self.dict_message_associated[frozen_message].pattern_str}
                     self.list_patterns.append(pattern)
             else:
                 # Else, compute it.
-                best_pattern = Journal.find_pattern(message, self.dict_patterns)
+                best_pattern = Journal.find_pattern(
+                    message, self.dict_patterns)
                 self.dict_message_associated[frozen_message] = best_pattern
                 if self.output == "":
                     pattern = best_pattern.id
                     self.list_patterns.append(pattern)
                 elif self.output == "logpai":
-                    pattern = {'Content': message, 'EventId': int(best_pattern.id), 'EventTemplate': best_pattern.pattern_str}
+                    pattern = {'Content': message, 'EventId': int(
+                        best_pattern.id), 'EventTemplate': best_pattern.pattern_str}
                     self.list_patterns.append(pattern)
         return pattern
 
@@ -126,10 +132,11 @@ class Journal:
         if isinstance(self.path, str):
             # For only one file
             try:
-                with open(self.path, "r", encoding=self.encoding) as file_open: 
+                with open(self.path, "r", encoding=self.encoding) as file_open:
                     if self.associated_pattern:
                         if self.sort_function != "":
-                            lines = self.sort_function(list(file_open.readlines()))
+                            lines = self.sort_function(
+                                list(file_open.readlines()))
                             for line in lines:
                                 self.associate_pattern(line)
                         else:
@@ -139,15 +146,16 @@ class Journal:
                         for line in file_open.readlines():
                             self.count_log(line)
             except:
-               logger.error("Error while reading the file: " +str(self.path))
+                logger.error("Error while reading the file: " + str(self.path))
         else:
             # For a list of files.
             for file_path in self.path:
                 try:
-                    with open(file_path, "r", encoding=self.encoding) as file_open: 
+                    with open(file_path, "r", encoding=self.encoding) as file_open:
                         if self.associated_pattern:
                             if self.sort_function != "":
-                                lines = self.sort_function(list(file_open.readlines()))
+                                lines = self.sort_function(
+                                    list(file_open.readlines()))
                                 for line in lines:
                                     self.associate_pattern(line)
                             else:
@@ -157,9 +165,10 @@ class Journal:
                             for line in file_open.readlines():
                                 self.count_log(line)
                 except:
-                  logger.error("Error while reading the file: " +str(file_path))
+                    logger.error(
+                        "Error while reading the file: " + str(file_path))
 
-    def filter_word(self, word : str) -> str:
+    def filter_word(self, word: str) -> str:
         """Get the descriptors of the word
 
         Args:
@@ -179,7 +188,7 @@ class Journal:
             self.dict_words_descriptors.setdefault(word, str_vector)
             return str_vector
 
-    def is_number(self, s : str) -> bool:
+    def is_number(self, s: str) -> bool:
         """Detect if a string is a float.
 
         Args:
@@ -195,11 +204,11 @@ class Journal:
             return False
 
     @staticmethod
-    def find_pattern(message : List[str], dict_patterns : dict) -> Pattern:
+    def find_pattern(message: List[str], dict_patterns: dict) -> Pattern:
         """Find the pattern associated to a log.
-        
+
         The best pattern is the pattern with the maximum common words with the line.
-        
+
         Args:
             message (List[str]): list of the words of the message part of the log.
             dict_patterns (dict): the dict of patterns.
@@ -223,13 +232,13 @@ class Journal:
                 # If we have more common words, then we have a new best pattern
                 if nb_word_match > len(best_pattern):
                     best_pattern = pattern
-            # If new size if lower than the size of the actual best pattern, stop the detection. 
+            # If new size if lower than the size of the actual best pattern, stop the detection.
             if len(best_pattern) > size_pattern:
                 break
         return best_pattern
 
     @staticmethod
-    def static_is_number(s : str) -> bool:
+    def static_is_number(s: str) -> bool:
         """Detect if a string is a float.
 
         Args:
@@ -245,7 +254,7 @@ class Journal:
             return False
 
     @staticmethod
-    def static_filter_word(word : str) -> str:
+    def static_filter_word(word: str) -> str:
         """Get the descriptors of the word
 
         Args:
@@ -262,7 +271,7 @@ class Journal:
             return Journal.create_vector(word)
 
     @staticmethod
-    def create_vector(word : str) -> str:
+    def create_vector(word: str) -> str:
         """Create the vector of descriptors associated to a word
 
         Args:
