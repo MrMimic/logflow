@@ -8,6 +8,48 @@
 
 # LogFlow
 
+## Train and deploy logFlow as a service
+
+The idea is to train logFlow to get log patterns on a huge dataset. They then need to be saved to be used later (as a model).
+Then, the found patterns are loaded, and the associate_pattern() method will be exposed behind a FastAPI.
+
+### Build docker image
+
+Clone this repository, then:
+
+```bash
+git clone https://github.com/MrMimic/logflow
+cd logflow
+docker build -t logflow:api .
+```
+
+This will result into a logflow Docker image, tagged as "api".
+Check it out with:
+
+```bash
+docker images logflow
+```
+
+### Training
+
+#### Define the log parsing function
+
+Check .py file in `api/log_parsing_function.py`
+
+This contains the function that will parse each logline to return the message part, splited into words.
+Read it carefully and adapt it to your need.
+
+#### Launch the training
+
+Then, the training is ready to be launched.
+Logs must be split into small files (LogFlow pipeline better fit while able to paralelise tasks) in a given folder.
+
+```bash
+./scripts/train.sh <PATH TO THE DATA>
+```
+
+The LogFLow docker will be run, and the pattern existing in your log folder will be saved under the /model folder as a pickle file.
+
 ## In a nutshell.
 LogFlow provides a tool to automate the logs analysis task. This analysis provides the correlations between the logs to help users to understand this amount of data.
 LogFlow is split into 3 modules: the log parsing tool, the relations discover model and the tree building tool.

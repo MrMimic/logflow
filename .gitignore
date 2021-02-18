@@ -3,3 +3,4 @@ cookbook/data/**
 *.html
 *.pyc
 *.vscode
+model
