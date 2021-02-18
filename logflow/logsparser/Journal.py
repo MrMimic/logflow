@@ -2,7 +2,7 @@
 from loguru import logger
 from collections import Counter
 from logflow.logsparser.Pattern import Pattern
-from typing import Dict, List, Tuple
+from typing import Dict, List, Tuple, Union, Any
 from loguru import logger
 # TODO: Test performance of static vs method
 
@@ -22,7 +22,6 @@ class Journal:
     """
 
     def __init__(self, parser_message, path : str , associated_pattern=False, dict_patterns = {}, large_file=False, pointer=-1, encoding="latin-1", sort_function="", output=""):
-        assert path != ""
         assert parser_message != ""
         if associated_pattern:
             assert dict_patterns != {}
@@ -57,7 +56,9 @@ class Journal:
             # We associate lines and patterns
             self.dict_message_associated : Dict[Tuple[str, ...], Pattern]= {}
             self.list_patterns = []
-            self.read_file()
+            # No need to parse any file to load found pattern as a model
+            if self.path:
+                self.read_file()
 
     def count_log(self, line : str):
         """Count the number of same entries according to their descriptors. for space and computation optimization.
@@ -89,7 +90,7 @@ class Journal:
                 self.counter_logs.setdefault(frozen_message_descriptors, 1)
                 self.counter_logs[self.dict_message[frozen_message]] += 1
 
-    def associate_pattern(self, line : str):
+    def associate_pattern(self, line : str) -> Union[int, Dict[str, Any]]:
         """Associate a line with a pattern. Add this pattern to the list of patterns.
 
         Args:
@@ -102,18 +103,23 @@ class Journal:
             if frozen_message in self.dict_message_associated:
                 # If we have already seen the message, we know the pattern.
                 if self.output == "":
-                    self.list_patterns.append(self.dict_message_associated[frozen_message].id)
+                    pattern = self.dict_message_associated[frozen_message].id
+                    self.list_patterns.append(pattern)
                 elif self.output == "logpai":
-                    self.list_patterns.append({'Content': message, 'EventId': int(self.dict_message_associated[frozen_message].id), 'EventTemplate': self.dict_message_associated[frozen_message].pattern_str})
+                    pattern = {'Content': message, 'EventId': int(self.dict_message_associated[frozen_message].id), 'EventTemplate': self.dict_message_associated[frozen_message].pattern_str}
+                    self.list_patterns.append(pattern)
             else:
                 # Else, compute it.
                 best_pattern = Journal.find_pattern(message, self.dict_patterns)
                 self.dict_message_associated[frozen_message] = best_pattern
                 if self.output == "":
-                    self.list_patterns.append(best_pattern.id)
+                    pattern = best_pattern.id
+                    self.list_patterns.append(pattern)
                 elif self.output == "logpai":
-                    self.list_patterns.append({'Content': message, 'EventId': int(best_pattern.id), 'EventTemplate': best_pattern.pattern_str})
-    
+                    pattern = {'Content': message, 'EventId': int(best_pattern.id), 'EventTemplate': best_pattern.pattern_str}
+                    self.list_patterns.append(pattern)
+        return pattern
+
     def read_file(self):
         """Read the logs files.
         """
