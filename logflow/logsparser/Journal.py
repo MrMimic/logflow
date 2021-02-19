@@ -6,6 +6,9 @@ from typing import Dict, List, Tuple, Union, Any
 from loguru import logger
 # TODO: Test performance of static vs method
 
+class LogTooShortError(Exception):
+    """ When a log does not respect the format it was trained for """
+
 
 class Journal:
     """A journal is a list of logs files. It reads, parses and associates the logs and the pattern.
@@ -124,6 +127,9 @@ class Journal:
                     pattern = {'Content': message, 'EventId': int(
                         best_pattern.id), 'EventTemplate': best_pattern.pattern_str}
                     self.list_patterns.append(pattern)
+        else:
+            raise LogTooShortError("Please provide a log having the same pattern the model was trained with.")
+
         return pattern
 
     def read_file(self):
