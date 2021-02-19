@@ -48,7 +48,21 @@ Logs must be split into small files (LogFlow pipeline better fit while able to p
 ./scripts/train.sh <PATH TO THE DATA>
 ```
 
-The LogFLow docker will be run, and the pattern existing in your log folder will be saved under the /model folder as a pickle file.
+The LogFLow docker will be run, and the patterns found in your log folder will be saved under the /model folder as a pickle file.
+
+### Launch the API
+
+Simply use the following command to start an API on localhost:80 with the newest trained model:
+
+```bash
+./scripts/serve.sh
+```
+
+To be used, simply run with this kind of GET call (single parameter *log*):
+
+```bash
+http://10.197.217.123/logflow?log=1564615513%202019%20Aug%20%201%2001:25:13%20m20000%20authpriv%20info%20sshd%20pam_unix(sshd:session):%20session%20closed%20for%20user%20root
+```
 
 ## In a nutshell.
 LogFlow provides a tool to automate the logs analysis task. This analysis provides the correlations between the logs to help users to understand this amount of data.
