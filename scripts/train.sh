@@ -10,7 +10,7 @@ if [ ! -d "$DATA_PATH" ]; then
     exit 1
 fi
 
-API_PATH="$PWD/api"
+API_PATH="$PWD"/api
 if [ ! -d "$API_PATH" ]; then
     echo "Please run this script from the cloned repository with:"
     echo "    bash scripts/train.sh"
@@ -18,7 +18,7 @@ if [ ! -d "$API_PATH" ]; then
 fi
 
 # Create a persistent folder to save the model
-OUTPUT_DIRECTORY=$PWD/model
+OUTPUT_DIRECTORY="$PWD"/model
 if [ ! -d "$OUTPUT_DIRECTORY" ]; then
     mkdir "$OUTPUT_DIRECTORY"
 fi
@@ -32,7 +32,7 @@ DOCKER_ID=$(docker run \
     -v "$DATA_PATH":/home/data \
     -v "$PWD":/home/code \
     -v "$OUTPUT_DIRECTORY":/home/output \
-    logflow /bin/bash)
+    logflow:api /bin/bash)
 
 # Train the model and save it under OUTPUT_DIRECTORY
 docker exec LOGFLOW bash -c "python3 /home/api/scripts/train.py"
